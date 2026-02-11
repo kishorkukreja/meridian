@@ -12,7 +12,7 @@ export function useIssues(filters?: Record<string, string>) {
     queryFn: async (): Promise<IssueWithObject[]> => {
       let query = supabase
         .from('meridian_issues')
-        .select('*, meridian_objects!inner(name, module)')
+        .select('*, meridian_objects!meridian_issues_object_id_fkey(name, module)')
         .eq('is_archived', filters?.is_archived === 'true' ? true : false)
 
       if (filters?.status) {
@@ -59,7 +59,7 @@ export function useIssue(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meridian_issues')
-        .select('*, meridian_objects!inner(name, module)')
+        .select('*, meridian_objects!meridian_issues_object_id_fkey(name, module)')
         .eq('id', id!)
         .single()
       if (error) throw error
