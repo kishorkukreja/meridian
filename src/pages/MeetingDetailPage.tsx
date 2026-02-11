@@ -10,6 +10,8 @@ export function MeetingDetailPage() {
   const deleteMeeting = useDeleteMeeting()
   const [showTranscript, setShowTranscript] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [emailCopied, setEmailCopied] = useState(false)
+  const [showEmailPreview, setShowEmailPreview] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   if (isLoading) return <LoadingSkeleton type="detail" />
@@ -25,6 +27,52 @@ export function MeetingDetailPage() {
   const handleDelete = async () => {
     await deleteMeeting.mutateAsync(meeting.id)
     navigate('/meetings')
+  }
+
+  const generateEmailBody = () => {
+    const date = new Date(meeting.meeting_date).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    })
+
+    let email = `Subject: MoM - ${meeting.title} (${date})\n\n`
+    email += `Hi all,\n\n`
+    email += `Please find below the minutes from our meeting on ${date}.\n\n`
+
+    if (meeting.tldr) {
+      email += `SUMMARY\n${meeting.tldr}\n\n`
+    }
+
+    if (meeting.discussion_points && meeting.discussion_points.length > 0) {
+      email += `DISCUSSION POINTS\n`
+      meeting.discussion_points.forEach((point, i) => {
+        email += `${i + 1}. ${point}\n`
+      })
+      email += `\n`
+    }
+
+    if (meeting.next_steps && meeting.next_steps.length > 0) {
+      email += `NEXT STEPS\n`
+      meeting.next_steps.forEach(step => {
+        email += `  - ${step.action}\n`
+        email += `    Owner: ${step.owner}  |  Due: ${step.due_date}\n`
+      })
+      email += `\n`
+    }
+
+    if (meeting.action_log) {
+      email += `ACTION LOG\n${meeting.action_log}\n\n`
+    }
+
+    email += `---\nPlease reach out if anything needs correction.\n\nBest regards`
+
+    return email
+  }
+
+  const handleCopyEmail = async () => {
+    const email = generateEmailBody()
+    await navigator.clipboard.writeText(email)
+    setEmailCopied(true)
+    setTimeout(() => setEmailCopied(false), 2000)
   }
 
   return (
@@ -55,6 +103,42 @@ export function MeetingDetailPage() {
           <span>Created: <span className="font-[family-name:var(--font-data)]">{new Date(meeting.created_at).toLocaleDateString()}</span></span>
         </div>
       </div>
+
+      {/* Email Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleCopyEmail}
+          className="h-8 px-3 rounded-lg text-xs font-medium cursor-pointer border"
+          style={{ borderColor: 'var(--color-accent)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+        >
+          {emailCopied ? 'Copied to Clipboard!' : 'Copy as Email'}
+        </button>
+        <button
+          onClick={() => setShowEmailPreview(!showEmailPreview)}
+          className="h-8 px-3 rounded-lg text-xs cursor-pointer border"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+        >
+          {showEmailPreview ? 'Hide Preview' : 'Preview Email'}
+        </button>
+      </div>
+
+      {showEmailPreview && (
+        <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Email Preview</h2>
+            <button
+              onClick={handleCopyEmail}
+              className="h-6 px-2 rounded text-[10px] cursor-pointer border"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+            >
+              {emailCopied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <pre className="text-xs whitespace-pre-wrap font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-primary)' }}>
+            {generateEmailBody()}
+          </pre>
+        </div>
+      )}
 
       {/* TLDR */}
       {meeting.tldr && (

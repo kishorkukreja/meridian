@@ -135,6 +135,14 @@ export function MeetingFormPage() {
     ))
   }
 
+  const addNextStep = () => {
+    setEditNextSteps(prev => [...prev, { action: '', owner: '', due_date: '' }])
+  }
+
+  const removeNextStep = (index: number) => {
+    setEditNextSteps(prev => prev.filter((_, i) => i !== index))
+  }
+
   // Phase 2: Review & Save
   if (generated) {
     const mom = editMode ? {
@@ -202,30 +210,49 @@ export function MeetingFormPage() {
           {editMode ? (
             <div className="space-y-2">
               {editNextSteps.map((step, i) => (
-                <div key={i} className="grid grid-cols-3 gap-2">
-                  <input
-                    value={step.action}
-                    onChange={e => updateNextStep(i, 'action', e.target.value)}
-                    placeholder="Action"
-                    className="px-2 py-1.5 rounded text-xs border outline-none"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                  />
-                  <input
-                    value={step.owner}
-                    onChange={e => updateNextStep(i, 'owner', e.target.value)}
-                    placeholder="Owner"
-                    className="px-2 py-1.5 rounded text-xs border outline-none"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                  />
-                  <input
-                    type="date"
-                    value={step.due_date}
-                    onChange={e => updateNextStep(i, 'due_date', e.target.value)}
-                    className="px-2 py-1.5 rounded text-xs border outline-none"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                  />
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="grid grid-cols-3 gap-2 flex-1">
+                    <input
+                      value={step.action}
+                      onChange={e => updateNextStep(i, 'action', e.target.value)}
+                      placeholder="Action"
+                      className="px-2 py-1.5 rounded text-xs border outline-none"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                    />
+                    <input
+                      value={step.owner}
+                      onChange={e => updateNextStep(i, 'owner', e.target.value)}
+                      placeholder="Owner"
+                      className="px-2 py-1.5 rounded text-xs border outline-none"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                    />
+                    <input
+                      type="date"
+                      value={step.due_date}
+                      onChange={e => updateNextStep(i, 'due_date', e.target.value)}
+                      className="px-2 py-1.5 rounded text-xs border outline-none"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeNextStep(i)}
+                    className="h-7 w-7 rounded flex items-center justify-center text-xs cursor-pointer border shrink-0"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-status-red)' }}
+                    title="Remove"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={addNextStep}
+                className="h-7 px-3 rounded text-xs cursor-pointer border"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+              >
+                + Add Step
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
