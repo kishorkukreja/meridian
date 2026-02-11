@@ -235,32 +235,56 @@ export function MeetingDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {meeting.next_steps.map((step, i) => (
+                {meeting.next_steps.map((step, i) => {
+                  const isLinked = meeting.linked_issue_titles.includes(step.action)
+                  return (
                   <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)' }}>
                     <td className="px-3 py-2 text-xs">{step.action}</td>
                     <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.owner}</td>
                     <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.due_date}</td>
                     <td className="px-3 py-2">
-                      <button
-                        onClick={() => setConvertSteps([step])}
-                        className="h-6 px-2 rounded text-[10px] cursor-pointer border whitespace-nowrap"
-                        style={{ borderColor: 'var(--color-accent)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
-                      >
-                        Create Issue
-                      </button>
+                      {isLinked ? (
+                        <span
+                          className="h-6 px-2 rounded text-[10px] inline-flex items-center border whitespace-nowrap"
+                          style={{ borderColor: 'var(--color-status-green)', backgroundColor: 'color-mix(in srgb, var(--color-status-green) 10%, transparent)', color: 'var(--color-status-green)' }}
+                        >
+                          Issue Linked
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setConvertSteps([step])}
+                          className="h-6 px-2 rounded text-[10px] cursor-pointer border whitespace-nowrap"
+                          style={{ borderColor: 'var(--color-accent)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+                        >
+                          Create Issue
+                        </button>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
-          <button
-            onClick={() => setConvertSteps(meeting.next_steps!)}
-            className="mt-3 h-8 px-4 rounded-lg text-xs font-medium cursor-pointer border"
-            style={{ borderColor: 'var(--color-accent)', backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)' }}
-          >
-            Convert All to Issues ({meeting.next_steps!.length})
-          </button>
+          {(() => {
+            const unlinked = meeting.next_steps!.filter(s => !meeting.linked_issue_titles.includes(s.action))
+            return unlinked.length > 0 ? (
+              <button
+                onClick={() => setConvertSteps(unlinked)}
+                className="mt-3 h-8 px-4 rounded-lg text-xs font-medium cursor-pointer border"
+                style={{ borderColor: 'var(--color-accent)', backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)' }}
+              >
+                Convert {unlinked.length === meeting.next_steps!.length ? 'All' : `Remaining ${unlinked.length}`} to Issues
+              </button>
+            ) : (
+              <span
+                className="mt-3 inline-flex items-center h-8 px-4 rounded-lg text-xs font-medium border"
+                style={{ borderColor: 'var(--color-status-green)', backgroundColor: 'color-mix(in srgb, var(--color-status-green) 10%, transparent)', color: 'var(--color-status-green)' }}
+              >
+                All Issues Linked
+              </span>
+            )
+          })()}
         </div>
       )}
 
