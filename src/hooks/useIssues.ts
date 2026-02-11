@@ -11,8 +11,8 @@ export function useIssues(filters?: Record<string, string>) {
     queryKey: ['issues', filters],
     queryFn: async (): Promise<IssueWithObject[]> => {
       let query = supabase
-        .from('issues')
-        .select('*, objects!inner(name, module)')
+        .from('meridian_issues')
+        .select('*, meridian_objects!inner(name, module)')
         .eq('is_archived', filters?.is_archived === 'true' ? true : false)
 
       if (filters?.status) {
@@ -25,7 +25,7 @@ export function useIssues(filters?: Record<string, string>) {
 
       if (filters?.issue_type) query = query.eq('issue_type', filters.issue_type as IssueRow['issue_type'])
       if (filters?.lifecycle_stage) query = query.eq('lifecycle_stage', filters.lifecycle_stage as IssueRow['lifecycle_stage'])
-      if (filters?.module) query = query.eq('objects.module' as any, filters.module)
+      if (filters?.module) query = query.eq('meridian_objects.module' as any, filters.module)
       if (filters?.search) query = query.ilike('title', `%${filters.search}%`)
 
       const sortField = filters?.sort || 'created_at'
@@ -37,10 +37,10 @@ export function useIssues(filters?: Record<string, string>) {
       if (error) throw error
 
       return (data || []).map((issue: Record<string, unknown>) => {
-        const objects = issue.objects as { name: string; module: string }
+        const objects = issue.meridian_objects as { name: string; module: string }
         return {
           ...issue,
-          objects: undefined,
+          meridian_objects: undefined,
           object_name: objects.name,
           object_module: objects.module,
           age_days: computeIssueAgeDays(issue.created_at as string, issue.resolved_at as string | null),
@@ -58,16 +58,16 @@ export function useIssue(id: string | undefined) {
     queryKey: ['issue', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('issues')
-        .select('*, objects!inner(name, module)')
+        .from('meridian_issues')
+        .select('*, meridian_objects!inner(name, module)')
         .eq('id', id!)
         .single()
       if (error) throw error
 
-      const objects = (data as Record<string, unknown>).objects as { name: string; module: string }
+      const objects = (data as Record<string, unknown>).meridian_objects as { name: string; module: string }
       return {
         ...data,
-        objects: undefined,
+        meridian_objects: undefined,
         object_name: objects.name,
         object_module: objects.module,
         age_days: computeIssueAgeDays(data.created_at, data.resolved_at),
@@ -84,7 +84,7 @@ export function useCreateIssue() {
   return useMutation({
     mutationFn: async (issue: Omit<IssueRow, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_archived'>) => {
       const { data, error } = await supabase
-        .from('issues')
+        .from('meridian_issues')
         .insert({ ...issue, user_id: user!.id, is_archived: false })
         .select()
         .single()
@@ -105,7 +105,7 @@ export function useUpdateIssue() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<IssueRow> & { id: string }) => {
       const { data, error } = await supabase
-        .from('issues')
+        .from('meridian_issues')
         .update(updates)
         .eq('id', id)
         .select()

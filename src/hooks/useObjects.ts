@@ -11,7 +11,7 @@ export function useObjects(filters?: Record<string, string>) {
     queryKey: ['objects', filters],
     queryFn: async (): Promise<ObjectWithComputed[]> => {
       let query = supabase
-        .from('objects')
+        .from('meridian_objects')
         .select('*')
         .eq('is_archived', filters?.is_archived === 'true' ? true : false)
 
@@ -40,7 +40,7 @@ export function useObjects(filters?: Record<string, string>) {
       let issues: IssueRow[] = []
       if (objectIds.length > 0) {
         const { data: issueData } = await supabase
-          .from('issues')
+          .from('meridian_issues')
           .select('*')
           .in('object_id', objectIds)
           .not('status', 'in', '("closed")')
@@ -65,14 +65,14 @@ export function useObject(id: string | undefined) {
     queryKey: ['object', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('objects')
+        .from('meridian_objects')
         .select('*')
         .eq('id', id!)
         .single()
       if (error) throw error
 
       const { data: issues } = await supabase
-        .from('issues')
+        .from('meridian_issues')
         .select('*')
         .eq('object_id', id!)
         .not('status', 'eq', 'closed')
@@ -95,7 +95,7 @@ export function useObjectIssues(objectId: string | undefined) {
     queryKey: ['object-issues', objectId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('issues')
+        .from('meridian_issues')
         .select('*')
         .eq('object_id', objectId!)
         .order('created_at', { ascending: false })
@@ -113,7 +113,7 @@ export function useStageHistory(objectId: string | undefined) {
     queryKey: ['stage-history', objectId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('stage_history')
+        .from('meridian_stage_history')
         .select('*')
         .eq('object_id', objectId!)
         .order('transitioned_at', { ascending: true })
@@ -131,7 +131,7 @@ export function useCreateObject() {
   return useMutation({
     mutationFn: async (obj: Omit<ObjectRow, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'stage_entered_at' | 'is_archived'>) => {
       const { data, error } = await supabase
-        .from('objects')
+        .from('meridian_objects')
         .insert({ ...obj, user_id: user!.id, is_archived: false })
         .select()
         .single()
@@ -150,7 +150,7 @@ export function useUpdateObject() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ObjectRow> & { id: string }) => {
       const { data, error } = await supabase
-        .from('objects')
+        .from('meridian_objects')
         .update(updates)
         .eq('id', id)
         .select()

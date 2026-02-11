@@ -188,7 +188,7 @@ export type IssueWithObject = IssueRow & {
 export type Database = {
   public: {
     Tables: {
-      objects: {
+      meridian_objects: {
         Row: ObjectRow;
         Insert: Omit<ObjectRow, 'id' | 'created_at' | 'updated_at' | 'stage_entered_at'> & {
           id?: string;
@@ -199,7 +199,7 @@ export type Database = {
         Update: Partial<Omit<ObjectRow, 'id' | 'user_id'>>;
         Relationships: [
           {
-            foreignKeyName: 'objects_user_id_fkey';
+            foreignKeyName: 'meridian_objects_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
@@ -207,7 +207,7 @@ export type Database = {
           },
         ];
       };
-      issues: {
+      meridian_issues: {
         Row: IssueRow;
         Insert: Omit<IssueRow, 'id' | 'created_at' | 'updated_at'> & {
           id?: string;
@@ -217,29 +217,29 @@ export type Database = {
         Update: Partial<Omit<IssueRow, 'id' | 'user_id'>>;
         Relationships: [
           {
-            foreignKeyName: 'issues_object_id_fkey';
+            foreignKeyName: 'meridian_issues_object_id_fkey';
             columns: ['object_id'];
             isOneToOne: false;
-            referencedRelation: 'objects';
+            referencedRelation: 'meridian_objects';
             referencedColumns: ['id'];
           },
           {
-            foreignKeyName: 'issues_user_id_fkey';
+            foreignKeyName: 'meridian_issues_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];
           },
           {
-            foreignKeyName: 'issues_blocked_by_object_id_fkey';
+            foreignKeyName: 'meridian_issues_blocked_by_object_id_fkey';
             columns: ['blocked_by_object_id'];
             isOneToOne: false;
-            referencedRelation: 'objects';
+            referencedRelation: 'meridian_objects';
             referencedColumns: ['id'];
           },
         ];
       };
-      stage_history: {
+      meridian_stage_history: {
         Row: StageHistoryRow;
         Insert: Omit<StageHistoryRow, 'id' | 'transitioned_at'> & {
           id?: string;
@@ -248,10 +248,10 @@ export type Database = {
         Update: Partial<Omit<StageHistoryRow, 'id'>>;
         Relationships: [
           {
-            foreignKeyName: 'stage_history_object_id_fkey';
+            foreignKeyName: 'meridian_stage_history_object_id_fkey';
             columns: ['object_id'];
             isOneToOne: false;
-            referencedRelation: 'objects';
+            referencedRelation: 'meridian_objects';
             referencedColumns: ['id'];
           },
         ];
