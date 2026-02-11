@@ -123,13 +123,22 @@ export function MeetingDetailPage() {
       <div>
         <div className="flex items-start justify-between gap-4 mb-2">
           <h1 className="text-xl font-bold">{meeting.title}</h1>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="h-8 px-3 rounded text-xs cursor-pointer border shrink-0"
-            style={{ borderColor: 'var(--color-status-red)', backgroundColor: 'transparent', color: 'var(--color-status-red)' }}
-          >
-            Delete
-          </button>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => navigate(`/meetings/${meeting.id}/edit`)}
+              className="h-8 px-3 rounded text-xs cursor-pointer border"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="h-8 px-3 rounded text-xs cursor-pointer border"
+              style={{ borderColor: 'var(--color-status-red)', backgroundColor: 'transparent', color: 'var(--color-status-red)' }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           <span
