@@ -317,6 +317,7 @@ export function MeetingFormPage() {
               </button>
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -358,6 +359,7 @@ export function MeetingFormPage() {
             >
               Convert All to Issues ({mom.next_steps.length})
             </button>
+            </>
           )}
         </div>
 
