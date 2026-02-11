@@ -12,6 +12,9 @@ import { IssueFormPage } from '@/pages/IssueFormPage'
 import { ArchivePage } from '@/pages/ArchivePage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ReportsPage } from '@/pages/ReportsPage'
+import { MeetingListPage } from '@/pages/MeetingListPage'
+import { MeetingFormPage } from '@/pages/MeetingFormPage'
+import { MeetingDetailPage } from '@/pages/MeetingDetailPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -58,6 +61,9 @@ export default function App() {
                 <Route path="/issues/:id" element={<IssueDetailPage />} />
                 <Route path="/issues/:id/edit" element={<IssueFormPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/meetings" element={<MeetingListPage />} />
+                <Route path="/meetings/new" element={<MeetingFormPage />} />
+                <Route path="/meetings/:id" element={<MeetingDetailPage />} />
                 <Route path="/archive" element={<ArchivePage />} />
               </Route>
             </Routes>

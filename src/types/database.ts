@@ -175,6 +175,34 @@ export type CommentRow = {
   created_at: string;
 }
 
+export type NextStep = {
+  action: string;
+  owner: string;
+  due_date: string;
+}
+
+export type MeetingRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  meeting_date: string;
+  transcript: string;
+  tldr: string | null;
+  discussion_points: string[] | null;
+  next_steps: NextStep[] | null;
+  action_log: string | null;
+  model_used: string | null;
+  linked_object_ids: string[];
+  linked_issue_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type MeetingWithLinks = MeetingRow & {
+  linked_object_names: string[];
+  linked_issue_titles: string[];
+}
+
 // ============================================
 // Computed / Enriched Types (for UI)
 // ============================================
@@ -276,6 +304,24 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'meridian_comments_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      meridian_meetings: {
+        Row: MeetingRow;
+        Insert: Omit<MeetingRow, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<MeetingRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_meetings_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
