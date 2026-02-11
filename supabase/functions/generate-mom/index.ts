@@ -82,16 +82,19 @@ Deno.serve(async (req: Request) => {
     }
 
     // Auto-select model based on transcript length
-    const model = transcript.length < 8000 ? 'gemini-2.0-flash' : 'gemini-2.0-pro'
+    const model = transcript.length < 8000 ? 'gemini-2.5-flash' : 'gemini-2.5-pro'
 
     const basePrompt = mode === 'quick_summary' ? QUICK_SUMMARY_PROMPT : FULL_MOM_PROMPT
     const prompt = `${basePrompt}\n\nTRANSCRIPT:\n${transcript}`
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY,
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
