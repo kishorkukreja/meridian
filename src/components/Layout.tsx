@@ -1,14 +1,13 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-
-const NAV_ITEMS = [
-  { to: '/objects', label: 'Objects', icon: ObjectsIcon },
-  { to: '/issues', label: 'Issues', icon: IssuesIcon },
-  { to: '/archive', label: 'Archive', icon: ArchiveIcon },
-]
+import { OBJECT_VIEWS, ISSUE_VIEWS } from '@/lib/savedViews'
 
 export function Layout() {
   const { signOut } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isObjectsPath = location.pathname.startsWith('/objects')
+  const isIssuesPath = location.pathname.startsWith('/issues')
 
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
@@ -26,26 +25,108 @@ export function Layout() {
           </p>
         </div>
 
-        <nav className="flex-1 py-2">
-          {NAV_ITEMS.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
-                  isActive ? 'border-r-2' : ''
-                }`
-              }
-              style={({ isActive }) => ({
-                color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
-                borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+        <nav className="flex-1 py-2 overflow-y-auto">
+          {/* Objects */}
+          <NavLink
+            to="/objects"
+            end
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <ObjectsIcon />
+            Objects
+          </NavLink>
+
+          {isObjectsPath && (
+            <div className="py-1">
+              {OBJECT_VIEWS.map(view => {
+                const params = new URLSearchParams(view.filters).toString()
+                const viewUrl = `/objects?${params}`
+                const isActive = location.search === `?${params}`
+                return (
+                  <button
+                    key={view.id}
+                    onClick={() => navigate(viewUrl)}
+                    className="w-full text-left pl-11 pr-4 py-1.5 text-xs cursor-pointer border-none transition-colors duration-150"
+                    style={{
+                      backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+                      color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {view.label}
+                  </button>
+                )
               })}
-            >
-              <item.icon />
-              {item.label}
-            </NavLink>
-          ))}
+            </div>
+          )}
+
+          {/* Issues */}
+          <NavLink
+            to="/issues"
+            end
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <IssuesIcon />
+            Issues
+          </NavLink>
+
+          {isIssuesPath && (
+            <div className="py-1">
+              {ISSUE_VIEWS.map(view => {
+                const params = new URLSearchParams(view.filters).toString()
+                const viewUrl = `/issues?${params}`
+                const isActive = location.search === `?${params}`
+                return (
+                  <button
+                    key={view.id}
+                    onClick={() => navigate(viewUrl)}
+                    className="w-full text-left pl-11 pr-4 py-1.5 text-xs cursor-pointer border-none transition-colors duration-150"
+                    style={{
+                      backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+                      color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {view.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Archive */}
+          <NavLink
+            to="/archive"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <ArchiveIcon />
+            Archive
+          </NavLink>
         </nav>
 
         <div className="p-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
@@ -69,19 +150,36 @@ export function Layout() {
         className="md:hidden fixed bottom-0 left-0 right-0 flex border-t"
         style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
       >
-        {NAV_ITEMS.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2"
-            style={({ isActive }) => ({
-              color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
-            })}
-          >
-            <item.icon />
-            <span className="text-[10px]">{item.label}</span>
-          </NavLink>
-        ))}
+        <NavLink
+          to="/objects"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <ObjectsIcon />
+          <span className="text-[10px]">Objects</span>
+        </NavLink>
+        <NavLink
+          to="/issues"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <IssuesIcon />
+          <span className="text-[10px]">Issues</span>
+        </NavLink>
+        <NavLink
+          to="/archive"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <ArchiveIcon />
+          <span className="text-[10px]">Archive</span>
+        </NavLink>
       </nav>
     </div>
   )

@@ -1,19 +1,27 @@
 import { useNavigate } from 'react-router-dom'
-import { useObjects } from '@/hooks/useObjects'
+import { useObjects, useUpdateObject } from '@/hooks/useObjects'
 import { useFilters } from '@/hooks/useFilters'
-import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LifecycleStepper } from '@/components/LifecycleStepper'
 import { FilterBar } from '@/components/FilterBar'
 import { SummaryBar } from '@/components/SummaryBar'
 import { EmptyState } from '@/components/EmptyState'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { InlineStatusSelect } from '@/components/InlineStatusSelect'
+import { ViewChips } from '@/components/ViewChips'
+import { OBJECT_VIEWS } from '@/lib/savedViews'
 import { MODULE_LABELS, CATEGORY_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS } from '@/lib/constants'
+import type { ObjectStatus } from '@/types/database'
 
 export function ObjectListPage() {
   const navigate = useNavigate()
   const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
   const { data: objects, isLoading, error } = useObjects(filters)
+  const updateObject = useUpdateObject()
+
+  const handleStatusChange = (objectId: string, newStatus: string) => {
+    updateObject.mutate({ id: objectId, status: newStatus as ObjectStatus })
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -28,6 +36,9 @@ export function ObjectListPage() {
           + New Object
         </button>
       </div>
+
+      {/* View Chips (scrollable on mobile) */}
+      <ViewChips views={OBJECT_VIEWS} basePath="/objects" />
 
       {/* Filters */}
       <FilterBar
@@ -92,7 +103,13 @@ export function ObjectListPage() {
                         <LifecycleStepper currentStage={obj.current_stage} compact />
                       </div>
                     </td>
-                    <td className="px-3 py-2.5"><StatusBadge status={obj.status} /></td>
+                    <td className="px-3 py-2.5">
+                      <InlineStatusSelect
+                        status={obj.status}
+                        type="object"
+                        onChange={(s) => handleStatusChange(obj.id, s)}
+                      />
+                    </td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
                       {obj.owner_alias || '-'}
                     </td>
@@ -129,7 +146,11 @@ export function ObjectListPage() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <span className="font-medium text-sm font-[family-name:var(--font-data)]">{obj.name}</span>
-                  <StatusBadge status={obj.status} />
+                  <InlineStatusSelect
+                    status={obj.status}
+                    type="object"
+                    onChange={(s) => handleStatusChange(obj.id, s)}
+                  />
                 </div>
                 <div className="flex items-center gap-3 text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
                   <span>{MODULE_LABELS[obj.module]}</span>

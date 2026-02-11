@@ -124,6 +124,22 @@ export function useStageHistory(objectId: string | undefined) {
   })
 }
 
+export function useObjectNames() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: ['object-names'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meridian_objects')
+        .select('name')
+      if (error) throw error
+      return (data || []).map(o => o.name)
+    },
+    enabled: !!user,
+  })
+}
+
 export function useCreateObject() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

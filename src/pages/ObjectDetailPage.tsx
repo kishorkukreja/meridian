@@ -5,9 +5,34 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LifecycleStepper } from '@/components/LifecycleStepper'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
-import { MODULE_LABELS, CATEGORY_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS, ISSUE_TYPE_LABELS } from '@/lib/constants'
+import { MODULE_LABELS, CATEGORY_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS, ISSUE_TYPE_LABELS, STAGE_COLORS } from '@/lib/constants'
 import { LIFECYCLE_STAGES, STAGE_LABELS } from '@/types/database'
-import type { LifecycleStage } from '@/types/database'
+import type { LifecycleStage, StageHistoryRow } from '@/types/database'
+
+function computeStageBreakdown(
+  stageHistory: StageHistoryRow[],
+  createdAt: string,
+  stageEnteredAt: string,
+  currentStage: LifecycleStage,
+): { stage: LifecycleStage; days: number }[] {
+  const stageDurations: Partial<Record<LifecycleStage, number>> = {}
+  let prevTime = new Date(createdAt).getTime()
+
+  for (const entry of stageHistory) {
+    const transTime = new Date(entry.transitioned_at).getTime()
+    const days = Math.max(0, Math.floor((transTime - prevTime) / (1000 * 60 * 60 * 24)))
+    stageDurations[entry.from_stage] = (stageDurations[entry.from_stage] || 0) + days
+    prevTime = transTime
+  }
+
+  // Current stage duration
+  const currentDays = Math.max(0, Math.floor((Date.now() - new Date(stageEnteredAt).getTime()) / (1000 * 60 * 60 * 24)))
+  stageDurations[currentStage] = (stageDurations[currentStage] || 0) + currentDays
+
+  return LIFECYCLE_STAGES
+    .filter(s => stageDurations[s] !== undefined)
+    .map(s => ({ stage: s, days: stageDurations[s]! }))
+}
 
 export function ObjectDetailPage() {
   const { id } = useParams()
@@ -32,6 +57,11 @@ export function ObjectDetailPage() {
     updateObject.mutate({ id: object.id, current_stage: newStage })
     setConfirmAction(null)
   }
+
+  const stageBreakdown = stageHistory
+    ? computeStageBreakdown(stageHistory, object.created_at, object.stage_entered_at, object.current_stage)
+    : []
+  const maxDays = stageBreakdown.length > 0 ? Math.max(...stageBreakdown.map(s => s.days), 1) : 1
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-4xl">
@@ -135,6 +165,46 @@ export function ObjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Aging Breakdown per Stage */}
+      {stageBreakdown.length > 0 && (
+        <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <h2 className="text-sm font-semibold mb-3">Time at Each Stage</h2>
+          <div className="space-y-2">
+            {stageBreakdown.map(({ stage, days }) => {
+              const isCurrent = stage === object.current_stage
+              const barWidth = Math.max(2, (days / maxDays) * 100)
+              return (
+                <div key={stage} className="flex items-center gap-3">
+                  <span
+                    className="text-[11px] w-24 shrink-0 truncate"
+                    style={{ color: isCurrent ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}
+                  >
+                    {STAGE_LABELS[stage]}
+                    {isCurrent && <span className="ml-1 text-[9px]" style={{ color: 'var(--color-accent)' }}>(current)</span>}
+                  </span>
+                  <div className="flex-1 h-4 rounded-sm overflow-hidden" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+                    <div
+                      className="h-full rounded-sm transition-all duration-300"
+                      style={{
+                        width: `${barWidth}%`,
+                        backgroundColor: STAGE_COLORS[stage],
+                        opacity: isCurrent ? 1 : 0.7,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-[11px] font-[family-name:var(--font-data)] w-12 text-right shrink-0"
+                    style={{ color: isCurrent ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}
+                  >
+                    {days}d
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Linked Issues */}
       <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>

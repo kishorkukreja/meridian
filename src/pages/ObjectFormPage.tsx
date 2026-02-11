@@ -1,10 +1,33 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect, type FormEvent } from 'react'
-import { useObject, useCreateObject, useUpdateObject } from '@/hooks/useObjects'
+import { useState, useEffect, useMemo, type FormEvent } from 'react'
+import { useObject, useCreateObject, useUpdateObject, useObjectNames } from '@/hooks/useObjects'
 import { LIFECYCLE_STAGES, STAGE_LABELS, MODULE_LABELS, CATEGORY_LABELS, MODULE_CATEGORIES } from '@/types/database'
 import { STATUS_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS } from '@/lib/constants'
 import type { ModuleType, ObjectCategory, LifecycleStage, ObjectStatus, RegionType } from '@/types/database'
 import type { SourceSystem } from '@/types/database'
+
+const MODULE_CODES: Record<ModuleType, string> = {
+  demand_planning: 'DP',
+  supply_planning: 'SP',
+}
+
+const CATEGORY_CODES: Record<ObjectCategory, string> = {
+  master_data: 'MD',
+  drivers: 'DR',
+  priority_1: 'P1',
+  priority_2: 'P2',
+  priority_3: 'P3',
+}
+
+function computeNextCode(existingNames: string[], module: ModuleType, category: ObjectCategory): string {
+  const prefix = `OBJ-${MODULE_CODES[module]}-${CATEGORY_CODES[category]}-`
+  const existing = existingNames
+    .filter(n => n.startsWith(prefix))
+    .map(n => parseInt(n.slice(prefix.length), 10))
+    .filter(n => !isNaN(n))
+  const next = existing.length > 0 ? Math.max(...existing) + 1 : 1
+  return `${prefix}${String(next).padStart(3, '0')}`
+}
 
 export function ObjectFormPage() {
   const { id } = useParams()
@@ -13,6 +36,7 @@ export function ObjectFormPage() {
   const { data: existing } = useObject(id)
   const createObject = useCreateObject()
   const updateObject = useUpdateObject()
+  const { data: existingNames } = useObjectNames()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -26,6 +50,7 @@ export function ObjectFormPage() {
   const [teamAlias, setTeamAlias] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
+  const [nameManuallyEdited, setNameManuallyEdited] = useState(false)
 
   useEffect(() => {
     if (existing) {
@@ -40,6 +65,7 @@ export function ObjectFormPage() {
       setOwnerAlias(existing.owner_alias || '')
       setTeamAlias(existing.team_alias || '')
       setNotes(existing.notes || '')
+      setNameManuallyEdited(true) // Don't auto-suggest for edits
     }
   }, [existing])
 
@@ -50,6 +76,18 @@ export function ObjectFormPage() {
       setCategory(availableCategories[0])
     }
   }, [module, availableCategories, category])
+
+  // Auto-suggest name for new objects
+  const suggestedName = useMemo(() => {
+    if (isEdit || !existingNames) return ''
+    return computeNextCode(existingNames, module, category)
+  }, [isEdit, existingNames, module, category])
+
+  useEffect(() => {
+    if (!isEdit && !nameManuallyEdited && suggestedName) {
+      setName(suggestedName)
+    }
+  }, [isEdit, nameManuallyEdited, suggestedName])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -97,15 +135,39 @@ export function ObjectFormPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
         <Field label="Name *">
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-            placeholder="OBJ-DP-MD-001"
-            className="w-full h-10 px-3 rounded-lg text-sm border outline-none font-[family-name:var(--font-data)]"
-            style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={name}
+              onChange={e => {
+                setName(e.target.value)
+                setNameManuallyEdited(true)
+              }}
+              required
+              placeholder="OBJ-DP-MD-001"
+              className="flex-1 h-10 px-3 rounded-lg text-sm border outline-none font-[family-name:var(--font-data)]"
+              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+            />
+            {!isEdit && suggestedName && nameManuallyEdited && name !== suggestedName && (
+              <button
+                type="button"
+                onClick={() => {
+                  setName(suggestedName)
+                  setNameManuallyEdited(false)
+                }}
+                className="h-10 px-3 rounded-lg text-xs cursor-pointer border-none whitespace-nowrap"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-accent)' }}
+                title={`Suggested: ${suggestedName}`}
+              >
+                Use {suggestedName}
+              </button>
+            )}
+          </div>
+          {!isEdit && suggestedName && !nameManuallyEdited && (
+            <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+              Auto-suggested based on module and category
+            </p>
+          )}
         </Field>
 
         {/* Description */}

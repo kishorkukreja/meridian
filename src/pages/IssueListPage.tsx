@@ -1,19 +1,48 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useIssues } from '@/hooks/useIssues'
+import { useIssues, useUpdateIssue } from '@/hooks/useIssues'
 import { useFilters } from '@/hooks/useFilters'
-import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { FilterBar } from '@/components/FilterBar'
 import { SummaryBar } from '@/components/SummaryBar'
 import { EmptyState } from '@/components/EmptyState'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { InlineStatusSelect } from '@/components/InlineStatusSelect'
+import { ViewChips } from '@/components/ViewChips'
+import { ISSUE_VIEWS } from '@/lib/savedViews'
 import { ISSUE_TYPE_LABELS } from '@/lib/constants'
 import { STAGE_LABELS } from '@/types/database'
+import type { IssueStatus } from '@/types/database'
 
 export function IssueListPage() {
   const navigate = useNavigate()
   const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
   const { data: issues, isLoading, error } = useIssues(filters)
+  const updateIssue = useUpdateIssue()
+
+  // Decision modal state for inline resolve/close
+  const [decisionModal, setDecisionModal] = useState<{ issueId: string; status: IssueStatus; existingDecision: string | null } | null>(null)
+  const [decisionText, setDecisionText] = useState('')
+
+  const handleStatusChange = (issueId: string, newStatus: string, existingDecision: string | null) => {
+    if (newStatus === 'resolved' || newStatus === 'closed') {
+      setDecisionModal({ issueId, status: newStatus as IssueStatus, existingDecision })
+      setDecisionText(existingDecision || '')
+    } else {
+      updateIssue.mutate({ id: issueId, status: newStatus as IssueStatus })
+    }
+  }
+
+  const handleDecisionSubmit = () => {
+    if (!decisionText.trim() || !decisionModal) return
+    updateIssue.mutate({
+      id: decisionModal.issueId,
+      status: decisionModal.status,
+      decision: decisionText,
+      resolved_at: new Date().toISOString(),
+    })
+    setDecisionModal(null)
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -27,6 +56,9 @@ export function IssueListPage() {
           + New Issue
         </button>
       </div>
+
+      {/* View Chips */}
+      <ViewChips views={ISSUE_VIEWS} basePath="/issues" />
 
       <FilterBar
         type="issues"
@@ -82,7 +114,13 @@ export function IssueListPage() {
                     <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                       {STAGE_LABELS[issue.lifecycle_stage]}
                     </td>
-                    <td className="px-3 py-2.5"><StatusBadge status={issue.status} type="issue" /></td>
+                    <td className="px-3 py-2.5">
+                      <InlineStatusSelect
+                        status={issue.status}
+                        type="issue"
+                        onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                      />
+                    </td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
                       {issue.owner_alias || '-'}
                     </td>
@@ -104,7 +142,11 @@ export function IssueListPage() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <span className="font-medium text-sm truncate flex-1">{issue.title}</span>
-                  <StatusBadge status={issue.status} type="issue" />
+                  <InlineStatusSelect
+                    status={issue.status}
+                    type="issue"
+                    onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                  />
                 </div>
                 <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   <span className="font-[family-name:var(--font-data)]">{issue.object_name}</span>
@@ -123,6 +165,44 @@ export function IssueListPage() {
             ))}
           </div>
         </>
+      )}
+
+      {/* Decision Modal */}
+      {decisionModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-md p-6 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            <h2 className="text-base font-bold mb-1">Record Decision</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              A decision is required when {decisionModal.status === 'resolved' ? 'resolving' : 'closing'} an issue.
+            </p>
+            <textarea
+              value={decisionText}
+              onChange={e => setDecisionText(e.target.value)}
+              rows={4}
+              placeholder="What was decided?"
+              className="w-full px-3 py-2 rounded-lg text-sm border outline-none resize-y mb-4"
+              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDecisionModal(null)}
+                className="h-9 px-4 text-sm cursor-pointer border-none bg-transparent"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDecisionSubmit}
+                disabled={!decisionText.trim()}
+                className="h-9 px-4 rounded-lg text-sm font-medium cursor-pointer border-none disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+              >
+                Save & {decisionModal.status === 'resolved' ? 'Resolve' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
