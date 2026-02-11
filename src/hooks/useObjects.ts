@@ -156,6 +156,7 @@ export function useCreateObject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['objects'] })
+      queryClient.invalidateQueries({ queryKey: ['object-names'] })
     },
   })
 }

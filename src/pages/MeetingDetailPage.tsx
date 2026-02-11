@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useMeeting, useDeleteMeeting } from '@/hooks/useMeetings'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { ConvertToIssueDialog } from '@/components/ConvertToIssueDialog'
+import type { NextStep } from '@/types/database'
 
 export function MeetingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: meeting, isLoading } = useMeeting(id)
   const deleteMeeting = useDeleteMeeting()
   const [showTranscript, setShowTranscript] = useState(false)
@@ -13,6 +17,7 @@ export function MeetingDetailPage() {
   const [emailCopied, setEmailCopied] = useState(false)
   const [showEmailPreview, setShowEmailPreview] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [convertSteps, setConvertSteps] = useState<NextStep[] | null>(null)
 
   if (isLoading) return <LoadingSkeleton type="detail" />
   if (!meeting) return <p className="p-6 text-sm" style={{ color: 'var(--color-status-red)' }}>Meeting not found.</p>
@@ -217,6 +222,7 @@ export function MeetingDetailPage() {
                   <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Action</th>
                   <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Owner</th>
                   <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due Date</th>
+                  <th className="w-24"></th>
                 </tr>
               </thead>
               <tbody>
@@ -225,11 +231,27 @@ export function MeetingDetailPage() {
                     <td className="px-3 py-2 text-xs">{step.action}</td>
                     <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.owner}</td>
                     <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.due_date}</td>
+                    <td className="px-3 py-2">
+                      <button
+                        onClick={() => setConvertSteps([step])}
+                        className="h-6 px-2 rounded text-[10px] cursor-pointer border whitespace-nowrap"
+                        style={{ borderColor: 'var(--color-accent)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+                      >
+                        Create Issue
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <button
+            onClick={() => setConvertSteps(meeting.next_steps!)}
+            className="mt-3 h-8 px-4 rounded-lg text-xs font-medium cursor-pointer border"
+            style={{ borderColor: 'var(--color-accent)', backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)' }}
+          >
+            Convert All to Issues ({meeting.next_steps!.length})
+          </button>
         </div>
       )}
 
@@ -318,6 +340,20 @@ export function MeetingDetailPage() {
           </pre>
         )}
       </div>
+
+      {/* Convert to Issue Dialog */}
+      {convertSteps && (
+        <ConvertToIssueDialog
+          nextSteps={convertSteps}
+          meetingId={meeting.id}
+          existingLinkedIssueIds={meeting.linked_issue_ids}
+          onClose={() => setConvertSteps(null)}
+          onComplete={() => {
+            setConvertSteps(null)
+            queryClient.invalidateQueries({ queryKey: ['meeting', id] })
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

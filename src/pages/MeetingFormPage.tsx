@@ -1,9 +1,10 @@
 import { useState, useRef, type FormEvent, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCreateMeeting, useGenerateMoM } from '@/hooks/useMeetings'
+import { useCreateMeeting, useUpdateMeeting, useGenerateMoM } from '@/hooks/useMeetings'
 import { useObjects } from '@/hooks/useObjects'
 import { useIssues } from '@/hooks/useIssues'
 import { readTranscriptFile } from '@/lib/fileReader'
+import { ConvertToIssueDialog } from '@/components/ConvertToIssueDialog'
 import type { NextStep, MeetingType } from '@/types/database'
 
 type GeneratedMoM = {
@@ -17,6 +18,7 @@ type GeneratedMoM = {
 export function MeetingFormPage() {
   const navigate = useNavigate()
   const createMeeting = useCreateMeeting()
+  const updateMeetingMut = useUpdateMeeting()
   const generateMoM = useGenerateMoM()
   const { data: objects } = useObjects({ is_archived: 'false' })
   const { data: issues } = useIssues()
@@ -40,6 +42,10 @@ export function MeetingFormPage() {
   const [editActionLog, setEditActionLog] = useState('')
 
   const [error, setError] = useState('')
+
+  // Convert-to-issue flow (save-first)
+  const [savedMeetingId, setSavedMeetingId] = useState<string | null>(null)
+  const [pendingConvertSteps, setPendingConvertSteps] = useState<NextStep[] | null>(null)
 
   const isQuickSummary = meetingType === 'quick_summary'
 
@@ -71,8 +77,7 @@ export function MeetingFormPage() {
     }
   }
 
-  const handleSave = async () => {
-    setError('')
+  const saveMeeting = async () => {
     const mom = editMode ? {
       tldr: editTldr,
       discussion_points: editDiscussion.split('\n').filter(Boolean),
@@ -85,21 +90,52 @@ export function MeetingFormPage() {
       action_log: isQuickSummary ? null : (generated!.action_log || null),
     }
 
+    const payload = {
+      title,
+      meeting_date: meetingDate,
+      transcript,
+      meeting_type: meetingType,
+      tldr: mom.tldr,
+      discussion_points: mom.discussion_points,
+      next_steps: mom.next_steps,
+      action_log: mom.action_log,
+      model_used: generated!.model_used,
+      linked_object_ids: linkedObjectIds,
+      linked_issue_ids: linkedIssueIds,
+    }
+
+    if (savedMeetingId) {
+      const result = await updateMeetingMut.mutateAsync({ id: savedMeetingId, ...payload })
+      return result
+    }
+
+    const result = await createMeeting.mutateAsync(payload)
+    setSavedMeetingId(result.id)
+    return result
+  }
+
+  const handleSave = async () => {
+    setError('')
     try {
-      const result = await createMeeting.mutateAsync({
-        title,
-        meeting_date: meetingDate,
-        transcript,
-        meeting_type: meetingType,
-        tldr: mom.tldr,
-        discussion_points: mom.discussion_points,
-        next_steps: mom.next_steps,
-        action_log: mom.action_log,
-        model_used: generated!.model_used,
-        linked_object_ids: linkedObjectIds,
-        linked_issue_ids: linkedIssueIds,
-      })
+      const result = await saveMeeting()
       navigate(`/meetings/${result.id}`)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  const handleConvertSteps = async (steps: NextStep[]) => {
+    setError('')
+    try {
+      if (savedMeetingId) {
+        // Already saved, open dialog directly
+        setPendingConvertSteps(steps)
+      } else {
+        // Save first, then open dialog
+        const result = await saveMeeting()
+        setSavedMeetingId(result.id)
+        setPendingConvertSteps(steps)
+      }
     } catch (err) {
       setError((err as Error).message)
     }
@@ -288,6 +324,7 @@ export function MeetingFormPage() {
                     <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Action</th>
                     <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Owner</th>
                     <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due Date</th>
+                    <th className="w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -296,11 +333,31 @@ export function MeetingFormPage() {
                       <td className="px-3 py-2 text-xs">{step.action}</td>
                       <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.owner}</td>
                       <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]">{step.due_date}</td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConvertSteps([step])}
+                          disabled={createMeeting.isPending}
+                          className="h-6 px-2 rounded text-[10px] cursor-pointer border whitespace-nowrap disabled:opacity-50"
+                          style={{ borderColor: 'var(--color-accent)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+                        >
+                          Create Issue
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <button
+              type="button"
+              onClick={() => handleConvertSteps(mom.next_steps)}
+              disabled={createMeeting.isPending}
+              className="mt-3 h-8 px-4 rounded-lg text-xs font-medium cursor-pointer border disabled:opacity-50"
+              style={{ borderColor: 'var(--color-accent)', backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)' }}
+            >
+              Convert All to Issues ({mom.next_steps.length})
+            </button>
           )}
         </div>
 
@@ -351,6 +408,20 @@ export function MeetingFormPage() {
             {generateMoM.isPending ? 'Generating...' : 'Regenerate'}
           </button>
         </div>
+
+        {/* Convert to Issue Dialog */}
+        {pendingConvertSteps && savedMeetingId && (
+          <ConvertToIssueDialog
+            nextSteps={pendingConvertSteps}
+            meetingId={savedMeetingId}
+            existingLinkedIssueIds={linkedIssueIds}
+            onClose={() => setPendingConvertSteps(null)}
+            onComplete={() => {
+              setPendingConvertSteps(null)
+              navigate(`/meetings/${savedMeetingId}`)
+            }}
+          />
+        )}
       </div>
     )
   }

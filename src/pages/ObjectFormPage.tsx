@@ -3,31 +3,9 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { useObject, useCreateObject, useUpdateObject, useObjectNames } from '@/hooks/useObjects'
 import { LIFECYCLE_STAGES, STAGE_LABELS, MODULE_LABELS, CATEGORY_LABELS, MODULE_CATEGORIES } from '@/types/database'
 import { STATUS_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS } from '@/lib/constants'
+import { computeNextCode } from '@/lib/objectUtils'
 import type { ModuleType, ObjectCategory, LifecycleStage, ObjectStatus, RegionType } from '@/types/database'
 import type { SourceSystem } from '@/types/database'
-
-const MODULE_CODES: Record<ModuleType, string> = {
-  demand_planning: 'DP',
-  supply_planning: 'SP',
-}
-
-const CATEGORY_CODES: Record<ObjectCategory, string> = {
-  master_data: 'MD',
-  drivers: 'DR',
-  priority_1: 'P1',
-  priority_2: 'P2',
-  priority_3: 'P3',
-}
-
-function computeNextCode(existingNames: string[], module: ModuleType, category: ObjectCategory): string {
-  const prefix = `OBJ-${MODULE_CODES[module]}-${CATEGORY_CODES[category]}-`
-  const existing = existingNames
-    .filter(n => n.startsWith(prefix))
-    .map(n => parseInt(n.slice(prefix.length), 10))
-    .filter(n => !isNaN(n))
-  const next = existing.length > 0 ? Math.max(...existing) + 1 : 1
-  return `${prefix}${String(next).padStart(3, '0')}`
-}
 
 export function ObjectFormPage() {
   const { id } = useParams()

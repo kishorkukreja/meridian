@@ -106,6 +106,27 @@ export function useDeleteMeeting() {
   })
 }
 
+export function useUpdateMeeting() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<MeetingRow> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('meridian_meetings')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as MeetingRow
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      queryClient.invalidateQueries({ queryKey: ['meeting', data.id] })
+    },
+  })
+}
+
 type MoMResponse = {
   tldr: string
   discussion_points: string[]
