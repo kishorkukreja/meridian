@@ -29,21 +29,48 @@ export function MeetingDetailPage() {
     navigate('/meetings')
   }
 
+  const isQuickSummary = meeting.meeting_type === 'quick_summary'
+
+  const QUOTES = [
+    '"A meeting is an event where minutes are kept and hours are lost." - Unknown',
+    '"The best meeting is the one that never happens." - Someone who values your time',
+    '"If you had to identify, in one word, the reason the human race has not achieved its full potential, that word would be meetings." - Dave Barry',
+    '"Meetings: where great ideas go to get bullet-pointed." - Corporate Wisdom',
+    '"The length of a meeting rises with the square of the number of people present." - Eileen Shanahan',
+    '"I survived another meeting that should have been an email." - Every Employee Ever',
+    '"People who enjoy meetings should not be in charge of anything." - Thomas Sowell',
+    '"A committee is a group of people who individually can do nothing, but who, as a group, can meet and decide that nothing can be done." - Fred Allen',
+    '"The most dangerous phrase in business is: Let\'s schedule a meeting about it." - Unknown',
+    '"You don\'t need more meetings. You need more clarity." - Someone who left early',
+  ]
+
+  const getQuote = () => {
+    // Use meeting id as seed for consistent quote per meeting
+    const hash = meeting.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+    return QUOTES[hash % QUOTES.length]
+  }
+
   const generateEmailBody = () => {
     const date = new Date(meeting.meeting_date).toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
 
-    let email = `Subject: MoM - ${meeting.title} (${date})\n\n`
+    const subjectPrefix = isQuickSummary ? 'Summary' : 'MoM'
+    let email = `Subject: ${subjectPrefix} - ${meeting.title} (${date})\n\n`
     email += `Hi all,\n\n`
-    email += `Please find below the minutes from our meeting on ${date}.\n\n`
+
+    if (isQuickSummary) {
+      email += `Here's a quick summary of what was discussed on ${date}.\n\n`
+    } else {
+      email += `Please find below the minutes from our meeting on ${date}.\n\n`
+    }
 
     if (meeting.tldr) {
-      email += `SUMMARY\n${meeting.tldr}\n\n`
+      email += `${isQuickSummary ? 'WHAT YOU MISSED' : 'SUMMARY'}\n${meeting.tldr}\n\n`
     }
 
     if (meeting.discussion_points && meeting.discussion_points.length > 0) {
-      email += `DISCUSSION POINTS\n`
+      email += `${isQuickSummary ? 'KEY TAKEAWAYS' : 'DISCUSSION POINTS'}\n`
       meeting.discussion_points.forEach((point, i) => {
         email += `${i + 1}. ${point}\n`
       })
@@ -51,7 +78,7 @@ export function MeetingDetailPage() {
     }
 
     if (meeting.next_steps && meeting.next_steps.length > 0) {
-      email += `NEXT STEPS\n`
+      email += `${isQuickSummary ? 'ACTION ITEMS' : 'NEXT STEPS'}\n`
       meeting.next_steps.forEach(step => {
         email += `  - ${step.action}\n`
         email += `    Owner: ${step.owner}  |  Due: ${step.due_date}\n`
@@ -59,11 +86,13 @@ export function MeetingDetailPage() {
       email += `\n`
     }
 
-    if (meeting.action_log) {
+    if (!isQuickSummary && meeting.action_log) {
       email += `ACTION LOG\n${meeting.action_log}\n\n`
     }
 
-    email += `---\nPlease reach out if anything needs correction.\n\nBest regards`
+    email += `---\nPlease reach out if anything needs correction.\n\n`
+    email += `${getQuote()}\n\n`
+    email += `Warm regards,\nKishor Kukreja`
 
     return email
   }
@@ -97,7 +126,18 @@ export function MeetingDetailPage() {
             Delete
           </button>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: meeting.meeting_type === 'quick_summary'
+                ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+              color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+            }}
+          >
+            {meeting.meeting_type === 'quick_summary' ? 'Quick Summary' : 'Full MoM'}
+          </span>
           <span>Date: <span className="font-[family-name:var(--font-data)]">{new Date(meeting.meeting_date).toLocaleDateString()}</span></span>
           {meeting.model_used && <span>Model: <span className="font-[family-name:var(--font-data)]">{meeting.model_used}</span></span>}
           <span>Created: <span className="font-[family-name:var(--font-data)]">{new Date(meeting.created_at).toLocaleDateString()}</span></span>
@@ -143,15 +183,19 @@ export function MeetingDetailPage() {
       {/* TLDR */}
       {meeting.tldr && (
         <div className="p-4 rounded-lg border-l-4" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-accent)' }}>
-          <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>TLDR</h2>
+          <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            {isQuickSummary ? 'What You Missed' : 'TLDR'}
+          </h2>
           <p className="text-sm">{meeting.tldr}</p>
         </div>
       )}
 
-      {/* Discussion Points */}
+      {/* Discussion Points / Key Takeaways */}
       {meeting.discussion_points && meeting.discussion_points.length > 0 && (
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h2 className="text-sm font-semibold mb-2">Discussion Points</h2>
+          <h2 className="text-sm font-semibold mb-2">
+            {isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
+          </h2>
           <ol className="list-decimal pl-5 space-y-1">
             {meeting.discussion_points.map((point, i) => (
               <li key={i} className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{point}</li>
@@ -160,10 +204,12 @@ export function MeetingDetailPage() {
         </div>
       )}
 
-      {/* Next Steps */}
+      {/* Next Steps / Action Items */}
       {meeting.next_steps && meeting.next_steps.length > 0 && (
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h2 className="text-sm font-semibold mb-2">Next Steps</h2>
+          <h2 className="text-sm font-semibold mb-2">
+            {isQuickSummary ? 'Action Items' : 'Next Steps'}
+          </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

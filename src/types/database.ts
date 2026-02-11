@@ -181,12 +181,15 @@ export type NextStep = {
   due_date: string;
 }
 
+export type MeetingType = 'full_mom' | 'quick_summary';
+
 export type MeetingRow = {
   id: string;
   user_id: string;
   title: string;
   meeting_date: string;
   transcript: string;
+  meeting_type: MeetingType;
   tldr: string | null;
   discussion_points: string[] | null;
   next_steps: NextStep[] | null;

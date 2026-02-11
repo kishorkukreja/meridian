@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
-import type { MeetingRow, MeetingWithLinks } from '@/types/database'
+import type { MeetingRow, MeetingWithLinks, MeetingType } from '@/types/database'
 
 export function useMeetings(search?: string) {
   const { user } = useAuth()
@@ -116,7 +116,7 @@ type MoMResponse = {
 
 export function useGenerateMoM() {
   return useMutation({
-    mutationFn: async (transcript: string): Promise<MoMResponse> => {
+    mutationFn: async ({ transcript, mode = 'full_mom' }: { transcript: string; mode?: MeetingType }): Promise<MoMResponse> => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
@@ -128,7 +128,7 @@ export function useGenerateMoM() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ transcript }),
+          body: JSON.stringify({ transcript, mode }),
         }
       )
 

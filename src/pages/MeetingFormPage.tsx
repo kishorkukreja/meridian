@@ -4,13 +4,13 @@ import { useCreateMeeting, useGenerateMoM } from '@/hooks/useMeetings'
 import { useObjects } from '@/hooks/useObjects'
 import { useIssues } from '@/hooks/useIssues'
 import { readTranscriptFile } from '@/lib/fileReader'
-import type { NextStep } from '@/types/database'
+import type { NextStep, MeetingType } from '@/types/database'
 
 type GeneratedMoM = {
   tldr: string
   discussion_points: string[]
   next_steps: NextStep[]
-  action_log: string
+  action_log?: string
   model_used: string
 }
 
@@ -26,6 +26,7 @@ export function MeetingFormPage() {
   const [title, setTitle] = useState('')
   const [meetingDate, setMeetingDate] = useState(new Date().toISOString().split('T')[0])
   const [transcript, setTranscript] = useState('')
+  const [meetingType, setMeetingType] = useState<MeetingType>('full_mom')
   const [linkedObjectIds, setLinkedObjectIds] = useState<string[]>([])
   const [linkedIssueIds, setLinkedIssueIds] = useState<string[]>([])
   const [fileError, setFileError] = useState('')
@@ -40,6 +41,8 @@ export function MeetingFormPage() {
 
   const [error, setError] = useState('')
 
+  const isQuickSummary = meetingType === 'quick_summary'
+
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -50,7 +53,6 @@ export function MeetingFormPage() {
     } catch (err) {
       setFileError((err as Error).message)
     }
-    // Reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -58,12 +60,12 @@ export function MeetingFormPage() {
     e.preventDefault()
     setError('')
     try {
-      const result = await generateMoM.mutateAsync(transcript)
+      const result = await generateMoM.mutateAsync({ transcript, mode: meetingType })
       setGenerated(result)
       setEditTldr(result.tldr)
       setEditDiscussion(result.discussion_points.join('\n'))
       setEditNextSteps(result.next_steps)
-      setEditActionLog(result.action_log)
+      setEditActionLog(result.action_log || '')
     } catch (err) {
       setError((err as Error).message)
     }
@@ -75,12 +77,12 @@ export function MeetingFormPage() {
       tldr: editTldr,
       discussion_points: editDiscussion.split('\n').filter(Boolean),
       next_steps: editNextSteps,
-      action_log: editActionLog,
+      action_log: isQuickSummary ? null : editActionLog,
     } : {
       tldr: generated!.tldr,
       discussion_points: generated!.discussion_points,
       next_steps: generated!.next_steps,
-      action_log: generated!.action_log,
+      action_log: isQuickSummary ? null : (generated!.action_log || null),
     }
 
     try {
@@ -88,6 +90,7 @@ export function MeetingFormPage() {
         title,
         meeting_date: meetingDate,
         transcript,
+        meeting_type: meetingType,
         tldr: mom.tldr,
         discussion_points: mom.discussion_points,
         next_steps: mom.next_steps,
@@ -106,12 +109,12 @@ export function MeetingFormPage() {
     setError('')
     setEditMode(false)
     try {
-      const result = await generateMoM.mutateAsync(transcript)
+      const result = await generateMoM.mutateAsync({ transcript, mode: meetingType })
       setGenerated(result)
       setEditTldr(result.tldr)
       setEditDiscussion(result.discussion_points.join('\n'))
       setEditNextSteps(result.next_steps)
-      setEditActionLog(result.action_log)
+      setEditActionLog(result.action_log || '')
     } catch (err) {
       setError((err as Error).message)
     }
@@ -162,19 +165,38 @@ export function MeetingFormPage() {
           &larr; Back to Input
         </button>
 
-        <h1 className="text-lg font-bold">Review Meeting Minutes</h1>
-        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          {title} &middot; {meetingDate} &middot; Model: {generated.model_used}
-        </p>
+        <div>
+          <h1 className="text-lg font-bold">
+            {isQuickSummary ? 'Review Quick Summary' : 'Review Meeting Minutes'}
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {title} &middot; {meetingDate} &middot; Model: {generated.model_used}
+            </p>
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: isQuickSummary
+                  ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                  : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                color: isQuickSummary ? 'var(--color-status-amber)' : 'var(--color-accent)',
+              }}
+            >
+              {isQuickSummary ? 'Quick Summary' : 'Full MoM'}
+            </span>
+          </div>
+        </div>
 
         {/* TLDR */}
         <div className="p-4 rounded-lg border-l-4" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-accent)' }}>
-          <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>TLDR</h2>
+          <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            {isQuickSummary ? 'What You Missed' : 'TLDR'}
+          </h2>
           {editMode ? (
             <textarea
               value={editTldr}
               onChange={e => setEditTldr(e.target.value)}
-              rows={2}
+              rows={3}
               className="w-full px-3 py-2 rounded-lg text-sm border outline-none resize-y"
               style={{ backgroundColor: 'var(--color-bg-primary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
             />
@@ -183,9 +205,11 @@ export function MeetingFormPage() {
           )}
         </div>
 
-        {/* Discussion Points */}
+        {/* Discussion Points / Key Takeaways */}
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h2 className="text-sm font-semibold mb-2">Discussion Points</h2>
+          <h2 className="text-sm font-semibold mb-2">
+            {isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
+          </h2>
           {editMode ? (
             <textarea
               value={editDiscussion}
@@ -204,9 +228,11 @@ export function MeetingFormPage() {
           )}
         </div>
 
-        {/* Next Steps */}
+        {/* Next Steps / Action Items */}
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h2 className="text-sm font-semibold mb-2">Next Steps</h2>
+          <h2 className="text-sm font-semibold mb-2">
+            {isQuickSummary ? 'Action Items' : 'Next Steps'}
+          </h2>
           {editMode ? (
             <div className="space-y-2">
               {editNextSteps.map((step, i) => (
@@ -278,23 +304,25 @@ export function MeetingFormPage() {
           )}
         </div>
 
-        {/* Action Log */}
-        <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h2 className="text-sm font-semibold mb-2">Action Log</h2>
-          {editMode ? (
-            <textarea
-              value={editActionLog}
-              onChange={e => setEditActionLog(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 rounded-lg text-sm font-[family-name:var(--font-data)] border outline-none resize-y"
-              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-            />
-          ) : (
-            <pre className="text-xs font-[family-name:var(--font-data)] whitespace-pre-wrap" style={{ color: 'var(--color-text-primary)' }}>
-              {mom.action_log}
-            </pre>
-          )}
-        </div>
+        {/* Action Log (full MoM only) */}
+        {!isQuickSummary && (
+          <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            <h2 className="text-sm font-semibold mb-2">Action Log</h2>
+            {editMode ? (
+              <textarea
+                value={editActionLog}
+                onChange={e => setEditActionLog(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 rounded-lg text-sm font-[family-name:var(--font-data)] border outline-none resize-y"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+              />
+            ) : (
+              <pre className="text-xs font-[family-name:var(--font-data)] whitespace-pre-wrap" style={{ color: 'var(--color-text-primary)' }}>
+                {mom.action_log}
+              </pre>
+            )}
+          </div>
+        )}
 
         {error && <p className="text-xs" style={{ color: 'var(--color-status-red)' }}>{error}</p>}
 
@@ -341,6 +369,41 @@ export function MeetingFormPage() {
       <h1 className="text-lg font-bold mb-6">New Meeting</h1>
 
       <form onSubmit={handleGenerate} className="space-y-4">
+        {/* Mode Toggle */}
+        <Field label="What do you need?">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMeetingType('full_mom')}
+              className="flex-1 h-10 rounded-lg text-sm font-medium cursor-pointer border transition-colors"
+              style={{
+                borderColor: meetingType === 'full_mom' ? 'var(--color-accent)' : 'var(--color-border)',
+                backgroundColor: meetingType === 'full_mom' ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+                color: meetingType === 'full_mom' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Full Minutes
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeetingType('quick_summary')}
+              className="flex-1 h-10 rounded-lg text-sm font-medium cursor-pointer border transition-colors"
+              style={{
+                borderColor: meetingType === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-border)',
+                backgroundColor: meetingType === 'quick_summary' ? 'color-mix(in srgb, var(--color-status-amber) 10%, transparent)' : 'transparent',
+                color: meetingType === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Quick Summary
+            </button>
+          </div>
+          <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-text-tertiary)' }}>
+            {meetingType === 'full_mom'
+              ? 'Full MoM with TLDR, discussion points, next steps, and action log.'
+              : 'Missed the meeting? Get key takeaways and action items to catch up fast.'}
+          </p>
+        </Field>
+
         <Field label="Title *">
           <input
             type="text"
@@ -456,7 +519,9 @@ export function MeetingFormPage() {
             className="h-10 px-6 rounded-lg text-sm font-medium cursor-pointer border-none disabled:opacity-50"
             style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
           >
-            {generateMoM.isPending ? 'Generating...' : 'Generate Minutes'}
+            {generateMoM.isPending
+              ? 'Generating...'
+              : isQuickSummary ? 'Generate Summary' : 'Generate Minutes'}
           </button>
           <button
             type="button"

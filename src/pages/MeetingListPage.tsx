@@ -49,7 +49,7 @@ export function MeetingListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
-                  {['Title', 'Date', 'TLDR', 'Linked', 'Created'].map(col => (
+                  {['Title', 'Type', 'Date', 'TLDR', 'Linked', 'Created'].map(col => (
                     <th key={col} className="text-left px-3 py-2.5 text-xs font-medium whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {col}
                     </th>
@@ -67,6 +67,19 @@ export function MeetingListPage() {
                     onMouseLeave={e => { e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)' }}
                   >
                     <td className="px-3 py-2.5 text-xs font-medium max-w-[200px] truncate">{meeting.title}</td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap"
+                        style={{
+                          backgroundColor: meeting.meeting_type === 'quick_summary'
+                            ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                            : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                          color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+                        }}
+                      >
+                        {meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
+                      </span>
+                    </td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)] whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {new Date(meeting.meeting_date).toLocaleDateString()}
                     </td>
@@ -95,7 +108,20 @@ export function MeetingListPage() {
                 style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
               >
                 <div className="flex items-start justify-between mb-1">
-                  <span className="font-medium text-sm truncate flex-1">{meeting.title}</span>
+                  <div className="flex items-center gap-2 truncate flex-1">
+                    <span className="font-medium text-sm truncate">{meeting.title}</span>
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: meeting.meeting_type === 'quick_summary'
+                          ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                          : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                        color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+                      }}
+                    >
+                      {meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
+                    </span>
+                  </div>
                   <span className="text-[10px] font-[family-name:var(--font-data)] shrink-0 ml-2" style={{ color: 'var(--color-text-tertiary)' }}>
                     {new Date(meeting.meeting_date).toLocaleDateString()}
                   </span>

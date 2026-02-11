@@ -7,6 +7,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const FULL_MOM_PROMPT = `You are a meeting minutes generator. Analyze the following meeting transcript and produce structured minutes of meeting (MoM).
+
+Return ONLY valid JSON with this exact structure (no markdown, no code fences):
+{
+  "tldr": "1-2 sentence summary of the meeting",
+  "discussion_points": ["point 1", "point 2", "point 3"],
+  "next_steps": [
+    {"action": "description of action", "owner": "person responsible", "due_date": "YYYY-MM-DD"}
+  ],
+  "action_log": "YYYY-MM-DD | Action 1\\nYYYY-MM-DD | Action 2"
+}
+
+Rules:
+- tldr: concise 1-2 sentence summary capturing the key outcome
+- discussion_points: 3-4 high-level topics discussed (not granular details)
+- next_steps: extract concrete action items with owner and realistic due dates
+- action_log: pre-formatted string, one line per action, format "YYYY-MM-DD | Action description"
+- If owner or due_date cannot be determined, use "TBD"
+- Dates in action_log should match the next_steps due dates`
+
+const QUICK_SUMMARY_PROMPT = `You are a meeting summary assistant. Someone missed this meeting and needs a quick catch-up. Analyze the transcript and provide a concise summary with key takeaways and action items.
+
+Return ONLY valid JSON with this exact structure (no markdown, no code fences):
+{
+  "tldr": "2-3 sentence summary covering what was discussed and any key decisions made",
+  "discussion_points": ["key point 1", "key point 2", "key point 3", "key point 4"],
+  "next_steps": [
+    {"action": "description of action item", "owner": "person responsible", "due_date": "YYYY-MM-DD"}
+  ]
+}
+
+Rules:
+- tldr: 2-3 sentences that give someone who missed the meeting a clear picture of what happened and what was decided
+- discussion_points: 4-6 high-level bullet points covering the main topics, decisions, and any concerns raised
+- next_steps: extract ALL action items mentioned, with owner and due date. If owner or due_date cannot be determined, use "TBD"
+- Focus on "what do I need to know" and "what do I need to do" — skip pleasantries and filler`
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -36,7 +73,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const { transcript } = await req.json()
+    const { transcript, mode = 'full_mom' } = await req.json()
     if (!transcript || typeof transcript !== 'string') {
       return new Response(JSON.stringify({ error: 'transcript is required' }), {
         status: 400,
@@ -47,28 +84,8 @@ Deno.serve(async (req: Request) => {
     // Auto-select model based on transcript length
     const model = transcript.length < 8000 ? 'gemini-2.0-flash' : 'gemini-2.0-pro'
 
-    const prompt = `You are a meeting minutes generator. Analyze the following meeting transcript and produce structured minutes of meeting (MoM).
-
-Return ONLY valid JSON with this exact structure (no markdown, no code fences):
-{
-  "tldr": "1-2 sentence summary of the meeting",
-  "discussion_points": ["point 1", "point 2", "point 3"],
-  "next_steps": [
-    {"action": "description of action", "owner": "person responsible", "due_date": "YYYY-MM-DD"}
-  ],
-  "action_log": "YYYY-MM-DD | Action 1\\nYYYY-MM-DD | Action 2"
-}
-
-Rules:
-- tldr: concise 1-2 sentence summary capturing the key outcome
-- discussion_points: 3-4 high-level topics discussed (not granular details)
-- next_steps: extract concrete action items with owner and realistic due dates
-- action_log: pre-formatted string, one line per action, format "YYYY-MM-DD | Action description"
-- If owner or due_date cannot be determined, use "TBD"
-- Dates in action_log should match the next_steps due dates
-
-TRANSCRIPT:
-${transcript}`
+    const basePrompt = mode === 'quick_summary' ? QUICK_SUMMARY_PROMPT : FULL_MOM_PROMPT
+    const prompt = `${basePrompt}\n\nTRANSCRIPT:\n${transcript}`
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
