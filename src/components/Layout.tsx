@@ -26,6 +26,24 @@ export function Layout() {
         </div>
 
         <nav className="flex-1 py-2 overflow-y-auto">
+          {/* Dashboard */}
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <DashboardIcon />
+            Dashboard
+          </NavLink>
+
           {/* Objects */}
           <NavLink
             to="/objects"
@@ -110,6 +128,24 @@ export function Layout() {
             </div>
           )}
 
+          {/* Reports */}
+          <NavLink
+            to="/reports"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <ReportsIcon />
+            Reports
+          </NavLink>
+
           {/* Archive */}
           <NavLink
             to="/archive"
@@ -151,6 +187,16 @@ export function Layout() {
         style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
       >
         <NavLink
+          to="/dashboard"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <DashboardIcon />
+          <span className="text-[10px]">Dashboard</span>
+        </NavLink>
+        <NavLink
           to="/objects"
           className="flex-1 flex flex-col items-center gap-0.5 py-2"
           style={({ isActive }) => ({
@@ -171,6 +217,16 @@ export function Layout() {
           <span className="text-[10px]">Issues</span>
         </NavLink>
         <NavLink
+          to="/reports"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <ReportsIcon />
+          <span className="text-[10px]">Reports</span>
+        </NavLink>
+        <NavLink
           to="/archive"
           className="flex-1 flex flex-col items-center gap-0.5 py-2"
           style={({ isActive }) => ({
@@ -182,6 +238,17 @@ export function Layout() {
         </NavLink>
       </nav>
     </div>
+  )
+}
+
+function DashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
   )
 }
 
@@ -201,6 +268,15 @@ function IssuesIcon() {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v4" />
       <path d="M12 16h.01" />
+    </svg>
+  )
+}
+
+function ReportsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <path d="M7 16l4-8 4 4 4-6" />
     </svg>
   )
 }

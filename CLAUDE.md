@@ -17,6 +17,11 @@ Before building any feature, read the relevant context file:
 | Filtering and views | `docs/features/03-views-and-filters.md` |
 | Aging logic | `docs/features/04-aging.md` |
 | Archiving | `docs/features/05-archiving.md` |
+| Excel export | `docs/features/06-excel-export.md` |
+| Reports page | `docs/features/07-reports.md` |
+| Dashboard / analytics | `docs/features/08-dashboard.md` |
+| Bulk actions | `docs/features/09-bulk-actions.md` |
+| Comments thread | `docs/features/10-comments.md` |
 | UI/UX, colors, typography, components | `docs/design/CONTEXT.md` |
 | Deployment (Vercel + Supabase) | `docs/deployment/CONTEXT.md` |
 | Data masking rules | `docs/masking/CONTEXT.md` |

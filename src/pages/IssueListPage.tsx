@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useIssues, useUpdateIssue } from '@/hooks/useIssues'
+import { useIssues, useUpdateIssue, useBulkUpdateIssues } from '@/hooks/useIssues'
+import { useObjects } from '@/hooks/useObjects'
 import { useFilters } from '@/hooks/useFilters'
 import { AgingBadge } from '@/components/AgingBadge'
 import { FilterBar } from '@/components/FilterBar'
@@ -9,7 +10,11 @@ import { EmptyState } from '@/components/EmptyState'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { InlineStatusSelect } from '@/components/InlineStatusSelect'
 import { ViewChips } from '@/components/ViewChips'
+import { ExportDropdown } from '@/components/ExportDropdown'
+import { BulkActionBar } from '@/components/BulkActionBar'
+import type { BulkAction } from '@/components/BulkActionBar'
 import { ISSUE_VIEWS } from '@/lib/savedViews'
+import { exportIssuesToExcel, exportFullWorkbook } from '@/lib/exportExcel'
 import { ISSUE_TYPE_LABELS } from '@/lib/constants'
 import { STAGE_LABELS } from '@/types/database'
 import type { IssueStatus } from '@/types/database'
@@ -18,11 +23,47 @@ export function IssueListPage() {
   const navigate = useNavigate()
   const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
   const { data: issues, isLoading, error } = useIssues(filters)
+  const { data: allIssues } = useIssues()
+  const { data: allObjects } = useObjects()
   const updateIssue = useUpdateIssue()
+  const bulkUpdate = useBulkUpdateIssues()
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Decision modal state for inline resolve/close
   const [decisionModal, setDecisionModal] = useState<{ issueId: string; status: IssueStatus; existingDecision: string | null } | null>(null)
   const [decisionText, setDecisionText] = useState('')
+
+  // Bulk decision modal state
+  const [bulkDecisionModal, setBulkDecisionModal] = useState<{ ids: string[]; status: IssueStatus } | null>(null)
+  const [bulkDecisionText, setBulkDecisionText] = useState('')
+
+  // Clear selection when filters change
+  useEffect(() => { setSelectedIds(new Set()) }, [filters])
+
+  // Escape to cancel selection
+  useEffect(() => {
+    if (selectedIds.size === 0) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedIds(new Set()) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [selectedIds.size])
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (!issues) return
+    if (selectedIds.size === issues.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(issues.map(i => i.id)))
+  }
 
   const handleStatusChange = (issueId: string, newStatus: string, existingDecision: string | null) => {
     if (newStatus === 'resolved' || newStatus === 'closed') {
@@ -44,17 +85,56 @@ export function IssueListPage() {
     setDecisionModal(null)
   }
 
+  const handleBulkAction = (action: BulkAction) => {
+    const ids = Array.from(selectedIds)
+    if (action.type === 'change_status') {
+      const status = action.status as IssueStatus
+      if (status === 'resolved' || status === 'closed') {
+        setBulkDecisionModal({ ids, status })
+        setBulkDecisionText('')
+        return
+      }
+      bulkUpdate.mutate({ ids, updates: { status } })
+    } else if (action.type === 'change_owner') {
+      bulkUpdate.mutate({ ids, updates: { owner_alias: action.owner } })
+    } else if (action.type === 'archive') {
+      bulkUpdate.mutate({ ids, updates: { is_archived: true } })
+    }
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDecisionSubmit = () => {
+    if (!bulkDecisionText.trim() || !bulkDecisionModal) return
+    bulkUpdate.mutate({
+      ids: bulkDecisionModal.ids,
+      updates: {
+        status: bulkDecisionModal.status,
+        decision: bulkDecisionText,
+        resolved_at: new Date().toISOString(),
+      },
+    })
+    setBulkDecisionModal(null)
+    setSelectedIds(new Set())
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Issues</h1>
-        <button
-          onClick={() => navigate('/issues/new')}
-          className="h-8 px-4 rounded-lg text-sm font-medium cursor-pointer border-none"
-          style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-        >
-          + New Issue
-        </button>
+        <div className="flex gap-2">
+          <ExportDropdown
+            onExportFiltered={() => issues && exportIssuesToExcel(issues)}
+            onExportAll={() => allObjects && allIssues && exportFullWorkbook(allObjects, allIssues)}
+            isLoading={!issues}
+          />
+          <button
+            onClick={() => navigate('/issues/new')}
+            className="h-8 px-4 rounded-lg text-sm font-medium cursor-pointer border-none"
+            style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+          >
+            + New Issue
+          </button>
+        </div>
       </div>
 
       {/* View Chips */}
@@ -87,6 +167,15 @@ export function IssueListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+                  <th className="w-8 px-2 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={issues.length > 0 && selectedIds.size === issues.length}
+                      onChange={toggleAll}
+                      className="cursor-pointer accent-[var(--color-accent)]"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </th>
                   {['Title', 'Object', 'Type', 'Stage', 'Status', 'Owner', 'Age'].map(col => (
                     <th key={col} className="text-left px-3 py-2.5 text-xs font-medium whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {col}
@@ -98,12 +187,29 @@ export function IssueListPage() {
                 {issues.map((issue, i) => (
                   <tr
                     key={issue.id}
-                    onClick={() => navigate(`/issues/${issue.id}`)}
+                    onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
                     className="cursor-pointer transition-colors duration-150"
-                    style={{ backgroundColor: i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)')}
+                    style={{
+                      backgroundColor: selectedIds.has(issue.id)
+                        ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                        : i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)',
+                    }}
+                    onMouseEnter={e => {
+                      if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
+                    }}
+                    onMouseLeave={e => {
+                      if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)'
+                    }}
                   >
+                    <td className="w-8 px-2 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(issue.id)}
+                        onChange={() => toggleSelect(issue.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="cursor-pointer accent-[var(--color-accent)]"
+                      />
+                    </td>
                     <td className="px-3 py-2.5 text-xs font-medium max-w-[200px] truncate">{issue.title}</td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
                       {issue.object_name}
@@ -136,9 +242,14 @@ export function IssueListPage() {
             {issues.map(issue => (
               <div
                 key={issue.id}
-                onClick={() => navigate(`/issues/${issue.id}`)}
+                onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
                 className="p-4 rounded-lg border cursor-pointer"
-                style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+                style={{
+                  backgroundColor: selectedIds.has(issue.id)
+                    ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                    : 'var(--color-bg-secondary)',
+                  borderColor: selectedIds.has(issue.id) ? 'var(--color-accent)' : 'var(--color-border)',
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <span className="font-medium text-sm truncate flex-1">{issue.title}</span>
@@ -167,7 +278,17 @@ export function IssueListPage() {
         </>
       )}
 
-      {/* Decision Modal */}
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          entityType="issues"
+          selectedCount={selectedIds.size}
+          onAction={handleBulkAction}
+          onCancel={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      {/* Single Decision Modal */}
       {decisionModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <div className="w-full max-w-md p-6 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
@@ -199,6 +320,44 @@ export function IssueListPage() {
                 style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
               >
                 Save & {decisionModal.status === 'resolved' ? 'Resolve' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Decision Modal */}
+      {bulkDecisionModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-md p-6 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            <h2 className="text-base font-bold mb-1">Record Decision</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              A decision is required when {bulkDecisionModal.status === 'resolved' ? 'resolving' : 'closing'} {bulkDecisionModal.ids.length} issues. The same decision will apply to all selected issues.
+            </p>
+            <textarea
+              value={bulkDecisionText}
+              onChange={e => setBulkDecisionText(e.target.value)}
+              rows={4}
+              placeholder="What was decided?"
+              className="w-full px-3 py-2 rounded-lg text-sm border outline-none resize-y mb-4"
+              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setBulkDecisionModal(null)}
+                className="h-9 px-4 text-sm cursor-pointer border-none bg-transparent"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDecisionSubmit}
+                disabled={!bulkDecisionText.trim()}
+                className="h-9 px-4 rounded-lg text-sm font-medium cursor-pointer border-none disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+              >
+                Save & {bulkDecisionModal.status === 'resolved' ? 'Resolve' : 'Close'} {bulkDecisionModal.ids.length} Issues
               </button>
             </div>
           </div>

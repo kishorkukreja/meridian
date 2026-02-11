@@ -10,6 +10,8 @@ import { IssueListPage } from '@/pages/IssueListPage'
 import { IssueDetailPage } from '@/pages/IssueDetailPage'
 import { IssueFormPage } from '@/pages/IssueFormPage'
 import { ArchivePage } from '@/pages/ArchivePage'
+import { DashboardPage } from '@/pages/DashboardPage'
+import { ReportsPage } from '@/pages/ReportsPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -45,7 +47,8 @@ export default function App() {
           <AuthGuard>
             <Routes>
               <Route element={<Layout />}>
-                <Route path="/" element={<Navigate to="/objects" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/objects" element={<ObjectListPage />} />
                 <Route path="/objects/new" element={<ObjectFormPage />} />
                 <Route path="/objects/:id" element={<ObjectDetailPage />} />
@@ -54,6 +57,7 @@ export default function App() {
                 <Route path="/issues/new" element={<IssueFormPage />} />
                 <Route path="/issues/:id" element={<IssueDetailPage />} />
                 <Route path="/issues/:id/edit" element={<IssueFormPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/archive" element={<ArchivePage />} />
               </Route>
             </Routes>

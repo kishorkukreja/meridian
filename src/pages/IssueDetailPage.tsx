@@ -4,6 +4,7 @@ import { useIssue, useUpdateIssue } from '@/hooks/useIssues'
 import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { CommentSection } from '@/components/CommentSection'
 import { ISSUE_TYPE_LABELS, ISSUE_STATUS_LABELS } from '@/lib/constants'
 import { STAGE_LABELS } from '@/types/database'
 import type { IssueStatus } from '@/types/database'
@@ -137,6 +138,9 @@ export function IssueDetailPage() {
           )}
         </div>
       )}
+
+      {/* Comments */}
+      <CommentSection entityType="issue" entityId={issue.id} />
 
       {/* Edit button */}
       <button

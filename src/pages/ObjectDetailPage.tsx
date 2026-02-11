@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LifecycleStepper } from '@/components/LifecycleStepper'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { CommentSection } from '@/components/CommentSection'
 import { MODULE_LABELS, CATEGORY_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS, ISSUE_TYPE_LABELS, STAGE_COLORS } from '@/lib/constants'
 import { LIFECYCLE_STAGES, STAGE_LABELS } from '@/types/database'
 import type { LifecycleStage, StageHistoryRow } from '@/types/database'
@@ -285,6 +286,9 @@ export function ObjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Comments */}
+      <CommentSection entityType="object" entityId={object.id} />
 
       {/* Notes */}
       {object.notes && (

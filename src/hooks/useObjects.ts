@@ -160,6 +160,23 @@ export function useCreateObject() {
   })
 }
 
+export function useBulkUpdateObjects() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<ObjectRow> }) => {
+      const { error } = await supabase
+        .from('meridian_objects')
+        .update(updates)
+        .in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['objects'] })
+    },
+  })
+}
+
 export function useUpdateObject() {
   const queryClient = useQueryClient()
 

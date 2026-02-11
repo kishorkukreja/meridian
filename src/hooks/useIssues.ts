@@ -99,6 +99,24 @@ export function useCreateIssue() {
   })
 }
 
+export function useBulkUpdateIssues() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<IssueRow> }) => {
+      const { error } = await supabase
+        .from('meridian_issues')
+        .update(updates)
+        .in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] })
+      queryClient.invalidateQueries({ queryKey: ['objects'] })
+    },
+  })
+}
+
 export function useUpdateIssue() {
   const queryClient = useQueryClient()
 

@@ -165,6 +165,16 @@ export type StageHistoryRow = {
   note: string | null;
 }
 
+export type CommentRow = {
+  id: string;
+  user_id: string;
+  entity_type: 'object' | 'issue';
+  entity_id: string;
+  body: string;
+  author_alias: string | null;
+  created_at: string;
+}
+
 // ============================================
 // Computed / Enriched Types (for UI)
 // ============================================
@@ -252,6 +262,23 @@ export type Database = {
             columns: ['object_id'];
             isOneToOne: false;
             referencedRelation: 'meridian_objects';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      meridian_comments: {
+        Row: CommentRow;
+        Insert: Omit<CommentRow, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<CommentRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_comments_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
