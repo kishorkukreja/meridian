@@ -63,7 +63,9 @@ const IGNORED_FILTER_KEYS = new Set(['sort', 'order', 'is_archived'])
 
 export function FilterBar({ type, filters, onFilterChange, onClear, activeCount }: Props) {
   const filterConfigs = type === 'objects' ? OBJECT_FILTERS : ISSUE_FILTERS
-  const statusLabels = type === 'issues' ? { ...ALL_LABELS, status: ISSUE_STATUS_LABELS } : ALL_LABELS
+  const statusLabels: Record<string, Record<string, string>> = type === 'issues'
+    ? { ...ALL_LABELS, status: ISSUE_STATUS_LABELS }
+    : ALL_LABELS
 
   const activeFilters = Object.entries(filters).filter(
     ([key, value]) => value && !IGNORED_FILTER_KEYS.has(key)
