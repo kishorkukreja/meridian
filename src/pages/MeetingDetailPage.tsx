@@ -35,6 +35,7 @@ export function MeetingDetailPage() {
   }
 
   const isQuickSummary = meeting.meeting_type === 'quick_summary'
+  const isAiConversation = meeting.meeting_type === 'ai_conversation'
 
   const QUOTES = [
     '"A meeting is an event where minutes are kept and hours are lost." - Unknown',
@@ -60,22 +61,24 @@ export function MeetingDetailPage() {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
 
-    const subjectPrefix = isQuickSummary ? 'Summary' : 'MoM'
+    const subjectPrefix = isAiConversation ? 'AI Chat Summary' : isQuickSummary ? 'Summary' : 'MoM'
     let email = `Subject: ${subjectPrefix} - ${meeting.title} (${date})\n\n`
     email += `Hi all,\n\n`
 
-    if (isQuickSummary) {
+    if (isAiConversation) {
+      email += `Here's a summary of issues extracted from an AI conversation on ${date}.\n\n`
+    } else if (isQuickSummary) {
       email += `Here's a quick summary of what was discussed on ${date}.\n\n`
     } else {
       email += `Please find below the minutes from our meeting on ${date}.\n\n`
     }
 
     if (meeting.tldr) {
-      email += `${isQuickSummary ? 'WHAT YOU MISSED' : 'SUMMARY'}\n${meeting.tldr}\n\n`
+      email += `${isAiConversation ? 'SUMMARY' : isQuickSummary ? 'WHAT YOU MISSED' : 'SUMMARY'}\n${meeting.tldr}\n\n`
     }
 
     if (meeting.discussion_points && meeting.discussion_points.length > 0) {
-      email += `${isQuickSummary ? 'KEY TAKEAWAYS' : 'DISCUSSION POINTS'}\n`
+      email += `${isAiConversation ? 'TOPICS COVERED' : isQuickSummary ? 'KEY TAKEAWAYS' : 'DISCUSSION POINTS'}\n`
       meeting.discussion_points.forEach((point, i) => {
         email += `${i + 1}. ${point}\n`
       })
@@ -83,7 +86,7 @@ export function MeetingDetailPage() {
     }
 
     if (meeting.next_steps && meeting.next_steps.length > 0) {
-      email += `${isQuickSummary ? 'ACTION ITEMS' : 'NEXT STEPS'}\n`
+      email += `${isAiConversation ? 'EXTRACTED ISSUES' : isQuickSummary ? 'ACTION ITEMS' : 'NEXT STEPS'}\n`
       meeting.next_steps.forEach(step => {
         email += `  - ${step.action}\n`
         email += `    Owner: ${step.owner}  |  Due: ${step.due_date}\n`
@@ -144,13 +147,15 @@ export function MeetingDetailPage() {
           <span
             className="text-[10px] px-2 py-0.5 rounded-full"
             style={{
-              backgroundColor: meeting.meeting_type === 'quick_summary'
-                ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
-                : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
-              color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+              backgroundColor: isAiConversation
+                ? 'color-mix(in srgb, #8B5CF6 15%, transparent)'
+                : meeting.meeting_type === 'quick_summary'
+                  ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                  : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+              color: isAiConversation ? '#8B5CF6' : meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
             }}
           >
-            {meeting.meeting_type === 'quick_summary' ? 'Quick Summary' : 'Full MoM'}
+            {isAiConversation ? 'AI Chat' : meeting.meeting_type === 'quick_summary' ? 'Quick Summary' : 'Full MoM'}
           </span>
           <span>Date: <span className="font-[family-name:var(--font-data)]">{new Date(meeting.meeting_date).toLocaleDateString()}</span></span>
           {meeting.model_used && <span>Model: <span className="font-[family-name:var(--font-data)]">{meeting.model_used}</span></span>}
@@ -198,7 +203,7 @@ export function MeetingDetailPage() {
       {meeting.tldr && (
         <div className="p-4 rounded-lg border-l-4" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-accent)' }}>
           <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-            {isQuickSummary ? 'What You Missed' : 'TLDR'}
+            {isAiConversation ? 'Summary' : isQuickSummary ? 'What You Missed' : 'TLDR'}
           </h2>
           <p className="text-sm">{meeting.tldr}</p>
         </div>
@@ -208,7 +213,7 @@ export function MeetingDetailPage() {
       {meeting.discussion_points && meeting.discussion_points.length > 0 && (
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h2 className="text-sm font-semibold mb-2">
-            {isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
+            {isAiConversation ? 'Topics Covered' : isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
           </h2>
           <ol className="list-decimal pl-5 space-y-1">
             {meeting.discussion_points.map((point, i) => (
@@ -222,7 +227,7 @@ export function MeetingDetailPage() {
       {meeting.next_steps && meeting.next_steps.length > 0 && (
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h2 className="text-sm font-semibold mb-2">
-            {isQuickSummary ? 'Action Items' : 'Next Steps'}
+            {isAiConversation ? 'Extracted Issues' : isQuickSummary ? 'Action Items' : 'Next Steps'}
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

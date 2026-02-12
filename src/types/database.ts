@@ -181,7 +181,7 @@ export type NextStep = {
   due_date: string;
 }
 
-export type MeetingType = 'full_mom' | 'quick_summary';
+export type MeetingType = 'full_mom' | 'quick_summary' | 'ai_conversation';
 
 export type MeetingRow = {
   id: string;

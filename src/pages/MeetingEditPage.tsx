@@ -42,6 +42,8 @@ export function MeetingEditPage() {
   if (!meeting) return <p className="p-6 text-sm" style={{ color: 'var(--color-status-red)' }}>Meeting not found.</p>
 
   const isQuickSummary = meeting.meeting_type === 'quick_summary'
+  const isAiConversation = meeting.meeting_type === 'ai_conversation'
+  const noActionLog = isQuickSummary || isAiConversation
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault()
@@ -54,7 +56,7 @@ export function MeetingEditPage() {
         tldr,
         discussion_points: discussionPoints.split('\n').filter(Boolean),
         next_steps: nextSteps,
-        action_log: isQuickSummary ? null : (actionLog || null),
+        action_log: noActionLog ? null : (actionLog || null),
         linked_object_ids: linkedObjectIds,
         linked_issue_ids: linkedIssueIds,
       })
@@ -105,13 +107,15 @@ export function MeetingEditPage() {
         <span
           className="text-[10px] px-2 py-0.5 rounded-full"
           style={{
-            backgroundColor: isQuickSummary
-              ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
-              : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
-            color: isQuickSummary ? 'var(--color-status-amber)' : 'var(--color-accent)',
+            backgroundColor: isAiConversation
+              ? 'color-mix(in srgb, #8B5CF6 15%, transparent)'
+              : isQuickSummary
+                ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+            color: isAiConversation ? '#8B5CF6' : isQuickSummary ? 'var(--color-status-amber)' : 'var(--color-accent)',
           }}
         >
-          {isQuickSummary ? 'Quick Summary' : 'Full MoM'}
+          {isAiConversation ? 'AI Chat' : isQuickSummary ? 'Quick Summary' : 'Full MoM'}
         </span>
       </div>
 
@@ -138,7 +142,7 @@ export function MeetingEditPage() {
           />
         </Field>
 
-        <Field label={isQuickSummary ? 'What You Missed' : 'TLDR'}>
+        <Field label={isAiConversation ? 'Summary' : isQuickSummary ? 'What You Missed' : 'TLDR'}>
           <textarea
             value={tldr}
             onChange={e => setTldr(e.target.value)}
@@ -148,7 +152,7 @@ export function MeetingEditPage() {
           />
         </Field>
 
-        <Field label={isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}>
+        <Field label={isAiConversation ? 'Topics Covered' : isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}>
           <textarea
             value={discussionPoints}
             onChange={e => setDiscussionPoints(e.target.value)}
@@ -159,7 +163,7 @@ export function MeetingEditPage() {
           />
         </Field>
 
-        <Field label={isQuickSummary ? 'Action Items' : 'Next Steps'}>
+        <Field label={isAiConversation ? 'Extracted Issues' : isQuickSummary ? 'Action Items' : 'Next Steps'}>
           <div className="space-y-2">
             {nextSteps.map((step, i) => (
               <div key={i} className="flex gap-2 items-start">
@@ -208,7 +212,7 @@ export function MeetingEditPage() {
           </div>
         </Field>
 
-        {!isQuickSummary && (
+        {!noActionLog && (
           <Field label="Action Log">
             <textarea
               value={actionLog}

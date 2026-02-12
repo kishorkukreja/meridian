@@ -1,9 +1,10 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react'
+import { useState, useRef, useCallback, type FormEvent, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateMeeting, useUpdateMeeting, useGenerateMoM } from '@/hooks/useMeetings'
 import { useObjects } from '@/hooks/useObjects'
 import { useIssues } from '@/hooks/useIssues'
 import { readTranscriptFile } from '@/lib/fileReader'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { ConvertToIssueDialog } from '@/components/ConvertToIssueDialog'
 import type { NextStep, MeetingType } from '@/types/database'
 
@@ -48,6 +49,13 @@ export function MeetingFormPage() {
   const [pendingConvertSteps, setPendingConvertSteps] = useState<NextStep[] | null>(null)
 
   const isQuickSummary = meetingType === 'quick_summary'
+  const isAiConversation = meetingType === 'ai_conversation'
+  const noActionLog = isQuickSummary || isAiConversation
+
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setTranscript(text)
+  }, [])
+  const { isListening, isSupported, startListening, stopListening } = useVoiceInput(handleVoiceTranscript)
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -82,7 +90,7 @@ export function MeetingFormPage() {
       tldr: editTldr,
       discussion_points: editDiscussion.split('\n').filter(Boolean),
       next_steps: editNextSteps,
-      action_log: isQuickSummary ? null : editActionLog,
+      action_log: noActionLog ? null : editActionLog,
     } : {
       tldr: generated!.tldr,
       discussion_points: generated!.discussion_points,
@@ -203,7 +211,7 @@ export function MeetingFormPage() {
 
         <div>
           <h1 className="text-lg font-bold">
-            {isQuickSummary ? 'Review Quick Summary' : 'Review Meeting Minutes'}
+            {isAiConversation ? 'Review Extracted Issues' : isQuickSummary ? 'Review Quick Summary' : 'Review Meeting Minutes'}
           </h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
@@ -212,13 +220,15 @@ export function MeetingFormPage() {
             <span
               className="text-[10px] px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: isQuickSummary
-                  ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
-                  : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
-                color: isQuickSummary ? 'var(--color-status-amber)' : 'var(--color-accent)',
+                backgroundColor: isAiConversation
+                  ? 'color-mix(in srgb, #8B5CF6 15%, transparent)'
+                  : isQuickSummary
+                    ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                    : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                color: isAiConversation ? '#8B5CF6' : isQuickSummary ? 'var(--color-status-amber)' : 'var(--color-accent)',
               }}
             >
-              {isQuickSummary ? 'Quick Summary' : 'Full MoM'}
+              {isAiConversation ? 'AI Chat' : isQuickSummary ? 'Quick Summary' : 'Full MoM'}
             </span>
           </div>
         </div>
@@ -226,7 +236,7 @@ export function MeetingFormPage() {
         {/* TLDR */}
         <div className="p-4 rounded-lg border-l-4" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-accent)' }}>
           <h2 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-            {isQuickSummary ? 'What You Missed' : 'TLDR'}
+            {isAiConversation ? 'Summary' : isQuickSummary ? 'What You Missed' : 'TLDR'}
           </h2>
           {editMode ? (
             <textarea
@@ -244,7 +254,7 @@ export function MeetingFormPage() {
         {/* Discussion Points / Key Takeaways */}
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h2 className="text-sm font-semibold mb-2">
-            {isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
+            {isAiConversation ? 'Topics Covered' : isQuickSummary ? 'Key Takeaways' : 'Discussion Points'}
           </h2>
           {editMode ? (
             <textarea
@@ -267,7 +277,7 @@ export function MeetingFormPage() {
         {/* Next Steps / Action Items */}
         <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h2 className="text-sm font-semibold mb-2">
-            {isQuickSummary ? 'Action Items' : 'Next Steps'}
+            {isAiConversation ? 'Extracted Issues' : isQuickSummary ? 'Action Items' : 'Next Steps'}
           </h2>
           {editMode ? (
             <div className="space-y-2">
@@ -364,7 +374,7 @@ export function MeetingFormPage() {
         </div>
 
         {/* Action Log (full MoM only) */}
-        {!isQuickSummary && (
+        {!noActionLog && (
           <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
             <h2 className="text-sm font-semibold mb-2">Action Log</h2>
             {editMode ? (
@@ -469,11 +479,25 @@ export function MeetingFormPage() {
             >
               Quick Summary
             </button>
+            <button
+              type="button"
+              onClick={() => setMeetingType('ai_conversation')}
+              className="flex-1 h-10 rounded-lg text-sm font-medium cursor-pointer border transition-colors"
+              style={{
+                borderColor: meetingType === 'ai_conversation' ? '#8B5CF6' : 'var(--color-border)',
+                backgroundColor: meetingType === 'ai_conversation' ? 'color-mix(in srgb, #8B5CF6 10%, transparent)' : 'transparent',
+                color: meetingType === 'ai_conversation' ? '#8B5CF6' : 'var(--color-text-secondary)',
+              }}
+            >
+              AI Chat
+            </button>
           </div>
           <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-text-tertiary)' }}>
             {meetingType === 'full_mom'
               ? 'Full MoM with TLDR, discussion points, next steps, and action log.'
-              : 'Missed the meeting? Get key takeaways and action items to catch up fast.'}
+              : meetingType === 'ai_conversation'
+                ? 'Dump an AI conversation to extract a summary and actionable issues.'
+                : 'Missed the meeting? Get key takeaways and action items to catch up fast.'}
           </p>
         </Field>
 
@@ -526,6 +550,34 @@ export function MeetingFormPage() {
               onChange={handleFileUpload}
               className="hidden"
             />
+            {isSupported && (
+              isListening ? (
+                <button
+                  type="button"
+                  onClick={stopListening}
+                  className="h-8 px-3 rounded text-xs cursor-pointer border flex items-center gap-2"
+                  style={{ borderColor: '#EF4444', backgroundColor: 'color-mix(in srgb, #EF4444 10%, transparent)', color: '#EF4444' }}
+                >
+                  <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#EF4444' }} />
+                  Listening... Stop
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startListening}
+                  className="h-8 px-3 rounded text-xs cursor-pointer border flex items-center gap-1.5"
+                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                  Voice
+                </button>
+              )
+            )}
             {transcript && (
               <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
                 {transcript.length.toLocaleString()} characters
@@ -594,7 +646,7 @@ export function MeetingFormPage() {
           >
             {generateMoM.isPending
               ? 'Generating...'
-              : isQuickSummary ? 'Generate Summary' : 'Generate Minutes'}
+              : isAiConversation ? 'Extract Issues' : isQuickSummary ? 'Generate Summary' : 'Generate Minutes'}
           </button>
           <button
             type="button"

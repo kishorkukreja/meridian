@@ -27,6 +27,23 @@ Rules:
 - If owner or due_date cannot be determined, use "TBD"
 - Dates in action_log should match the next_steps due dates`
 
+const AI_CONVERSATION_PROMPT = `You are an issue extraction assistant. Analyze this conversation between a user and an AI assistant. The user was brainstorming, planning, or troubleshooting work items. Extract a structured summary focused on actionable outcomes.
+
+Return ONLY valid JSON with this exact structure (no markdown, no code fences):
+{
+  "tldr": "2-3 sentence summary of what was discussed and decided",
+  "discussion_points": ["topic 1", "topic 2", "topic 3"],
+  "next_steps": [
+    {"action": "specific actionable task", "owner": "TBD", "due_date": "TBD"}
+  ]
+}
+
+Rules:
+- tldr: 2-3 sentences summarizing the conversation's purpose, key decisions, and outcomes
+- discussion_points: 4-8 topics/themes covered in the conversation
+- next_steps: extract EVERY actionable item, task, to-do, or follow-up mentioned. Be aggressive — if something sounds like work that needs doing, include it. Set owner and due_date to "TBD" unless explicitly stated.
+- Focus on concrete deliverables, not abstract discussion topics`
+
 const QUICK_SUMMARY_PROMPT = `You are a meeting summary assistant. Someone missed this meeting and needs a quick catch-up. Analyze the transcript and provide a concise summary with key takeaways and action items.
 
 Return ONLY valid JSON with this exact structure (no markdown, no code fences):
@@ -84,7 +101,7 @@ Deno.serve(async (req: Request) => {
     // Auto-select model based on transcript length
     const model = transcript.length < 8000 ? 'gemini-2.5-flash' : 'gemini-2.5-pro'
 
-    const basePrompt = mode === 'quick_summary' ? QUICK_SUMMARY_PROMPT : FULL_MOM_PROMPT
+    const basePrompt = mode === 'ai_conversation' ? AI_CONVERSATION_PROMPT : mode === 'quick_summary' ? QUICK_SUMMARY_PROMPT : FULL_MOM_PROMPT
     const prompt = `${basePrompt}\n\nTRANSCRIPT:\n${transcript}`
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`

@@ -71,13 +71,15 @@ export function MeetingListPage() {
                       <span
                         className="text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap"
                         style={{
-                          backgroundColor: meeting.meeting_type === 'quick_summary'
-                            ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
-                            : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
-                          color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+                          backgroundColor: meeting.meeting_type === 'ai_conversation'
+                            ? 'color-mix(in srgb, #8B5CF6 15%, transparent)'
+                            : meeting.meeting_type === 'quick_summary'
+                              ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                              : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                          color: meeting.meeting_type === 'ai_conversation' ? '#8B5CF6' : meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
                         }}
                       >
-                        {meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
+                        {meeting.meeting_type === 'ai_conversation' ? 'AI Chat' : meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)] whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
@@ -113,13 +115,15 @@ export function MeetingListPage() {
                     <span
                       className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0"
                       style={{
-                        backgroundColor: meeting.meeting_type === 'quick_summary'
-                          ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
-                          : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
-                        color: meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
+                        backgroundColor: meeting.meeting_type === 'ai_conversation'
+                          ? 'color-mix(in srgb, #8B5CF6 15%, transparent)'
+                          : meeting.meeting_type === 'quick_summary'
+                            ? 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)'
+                            : 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
+                        color: meeting.meeting_type === 'ai_conversation' ? '#8B5CF6' : meeting.meeting_type === 'quick_summary' ? 'var(--color-status-amber)' : 'var(--color-accent)',
                       }}
                     >
-                      {meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
+                      {meeting.meeting_type === 'ai_conversation' ? 'AI Chat' : meeting.meeting_type === 'quick_summary' ? 'Summary' : 'MoM'}
                     </span>
                   </div>
                   <span className="text-[10px] font-[family-name:var(--font-data)] shrink-0 ml-2" style={{ color: 'var(--color-text-tertiary)' }}>
