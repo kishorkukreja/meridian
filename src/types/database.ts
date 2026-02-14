@@ -183,6 +183,16 @@ export type NextStep = {
 
 export type MeetingType = 'full_mom' | 'quick_summary' | 'ai_conversation';
 
+export type RecurrencePattern = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+
+export const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  biweekly: 'Biweekly',
+  monthly: 'Monthly',
+  custom: 'Custom',
+};
+
 export type MeetingRow = {
   id: string;
   user_id: string;
@@ -204,6 +214,46 @@ export type MeetingRow = {
 export type MeetingWithLinks = MeetingRow & {
   linked_object_names: string[];
   linked_issue_titles: string[];
+}
+
+export type RecurringMeetingRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  recurrence: RecurrencePattern;
+  day_of_week: number | null;
+  day_of_month: number | null;
+  time_of_day: string;
+  duration_minutes: number;
+  custom_interval_days: number | null;
+  start_date: string;
+  end_date: string | null;
+  linked_object_ids: string[];
+  linked_issue_ids: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScheduleLogRow = {
+  id: string;
+  user_id: string;
+  recurring_meeting_id: string;
+  occurrence_date: string;
+  invite_sent: boolean;
+  attended: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScheduleOccurrence = {
+  meeting: RecurringMeetingRow;
+  date: string;
+  log: ScheduleLogRow | null;
+  is_past: boolean;
+  is_today: boolean;
 }
 
 // ============================================
@@ -332,6 +382,49 @@ export type Database = {
           },
         ];
       };
+      meridian_recurring_meetings: {
+        Row: RecurringMeetingRow;
+        Insert: Omit<RecurringMeetingRow, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<RecurringMeetingRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_recurring_meetings_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      meridian_schedule_logs: {
+        Row: ScheduleLogRow;
+        Insert: Omit<ScheduleLogRow, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<ScheduleLogRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_schedule_logs_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'meridian_schedule_logs_recurring_meeting_id_fkey';
+            columns: ['recurring_meeting_id'];
+            isOneToOne: false;
+            referencedRelation: 'meridian_recurring_meetings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -348,6 +441,7 @@ export type Database = {
       issue_status: IssueStatus;
       object_status: ObjectStatus;
       region_type: RegionType;
+      recurrence_pattern: RecurrencePattern;
     };
     CompositeTypes: {
       [_ in never]: never;

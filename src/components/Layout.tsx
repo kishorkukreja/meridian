@@ -164,6 +164,24 @@ export function Layout() {
             Meetings
           </NavLink>
 
+          {/* Schedule */}
+          <NavLink
+            to="/schedule"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'border-r-2' : ''
+              }`
+            }
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: isActive ? 'var(--color-bg-tertiary)' : 'transparent',
+              borderColor: isActive ? 'var(--color-accent)' : 'transparent',
+            })}
+          >
+            <ScheduleIcon />
+            Schedule
+          </NavLink>
+
           {/* Archive */}
           <NavLink
             to="/archive"
@@ -255,6 +273,16 @@ export function Layout() {
           <span className="text-[10px]">Meetings</span>
         </NavLink>
         <NavLink
+          to="/schedule"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+          })}
+        >
+          <ScheduleIcon />
+          <span className="text-[10px]">Schedule</span>
+        </NavLink>
+        <NavLink
           to="/archive"
           className="flex-1 flex flex-col items-center gap-0.5 py-2"
           style={({ isActive }) => ({
@@ -317,6 +345,22 @@ function MeetingsIcon() {
       <line x1="16" y1="13" x2="8" y2="13" />
       <line x1="16" y1="17" x2="8" y2="17" />
       <polyline points="10 9 9 9 8 9" />
+    </svg>
+  )
+}
+
+function ScheduleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 18h.01" />
+      <path d="M12 18h.01" />
     </svg>
   )
 }
