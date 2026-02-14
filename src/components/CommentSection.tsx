@@ -88,14 +88,14 @@ export function CommentSection({ entityType, entityId }: Props) {
         </div>
       )}
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 items-end">
         <textarea
           value={body}
           onChange={e => setBody(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add a comment..."
-          rows={1}
-          className="flex-1 px-3 py-2 rounded-lg text-sm border outline-none resize-none"
+          rows={3}
+          className="flex-1 px-3 py-2 rounded-lg text-sm border outline-none resize-y min-h-[72px]"
           style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
         />
         <button
