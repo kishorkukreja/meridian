@@ -22,7 +22,7 @@ import type { ObjectStatus } from '@/types/database'
 
 export function ObjectListPage() {
   const navigate = useNavigate()
-  const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
+  const { filters, setFilter, setMultipleFilters, clearFilters, activeFilterCount } = useFilters()
   const { data: objects, isLoading, error } = useObjects(filters)
   const { data: allObjects } = useObjects()
   const { data: allIssues } = useIssues()
@@ -94,8 +94,7 @@ export function ObjectListPage() {
             currentSort={filters.sort || 'created_at'}
             currentOrder={(filters.order as 'asc' | 'desc') || 'desc'}
             onSortChange={(sort, order) => {
-              setFilter('sort', sort)
-              setFilter('order', order)
+              setMultipleFilters({ sort, order })
             }}
           />
           <ExportDropdown

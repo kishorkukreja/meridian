@@ -24,7 +24,7 @@ import type { IssueStatus, ModuleType } from '@/types/database'
 export function IssueListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
+  const { filters, setFilter, setMultipleFilters, clearFilters, activeFilterCount } = useFilters()
   const { data: issues, isLoading, error } = useIssues(filters)
   const { data: allIssues } = useIssues()
   const { data: allObjects } = useObjects()
@@ -222,8 +222,7 @@ export function IssueListPage() {
             currentSort={filters.sort || 'created_at'}
             currentOrder={(filters.order as 'asc' | 'desc') || 'desc'}
             onSortChange={(sort, order) => {
-              setFilter('sort', sort)
-              setFilter('order', order)
+              setMultipleFilters({ sort, order })
             }}
           />
           <ExportDropdown

@@ -24,6 +24,20 @@ export function useFilters() {
     })
   }, [setSearchParams])
 
+  const setMultipleFilters = useCallback((updates: Record<string, string | null>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === '') {
+          next.delete(key)
+        } else {
+          next.set(key, value)
+        }
+      }
+      return next
+    })
+  }, [setSearchParams])
+
   const clearFilters = useCallback(() => {
     setSearchParams(new URLSearchParams())
   }, [setSearchParams])
@@ -32,5 +46,5 @@ export function useFilters() {
     return Array.from(searchParams.keys()).filter(k => k !== 'sort' && k !== 'order' && k !== 'view').length
   }, [searchParams])
 
-  return { filters, setFilter, clearFilters, activeFilterCount }
+  return { filters, setFilter, setMultipleFilters, clearFilters, activeFilterCount }
 }

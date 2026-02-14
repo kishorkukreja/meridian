@@ -30,7 +30,7 @@ export function useIssues(filters?: Record<string, string>) {
       if (filters?.search) query = query.ilike('title', `%${filters.search}%`)
 
       const sortField = filters?.sort || 'created_at'
-      const sortOrder = filters?.order === 'desc' ? false : true
+      const sortOrder = filters?.order === 'asc'
 
       query = query.order(sortField as keyof IssueRow, { ascending: sortOrder })
 

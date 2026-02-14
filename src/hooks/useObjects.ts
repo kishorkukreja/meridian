@@ -23,7 +23,7 @@ export function useObjects(filters?: Record<string, string>) {
       if (filters?.region) query = query.eq('region', filters.region as ObjectRow['region'])
       if (filters?.search) query = query.ilike('name', `%${filters.search}%`)
 
-      const sortField = filters?.sort || 'status'
+      const sortField = filters?.sort || 'created_at'
       const sortOrder = filters?.order === 'asc'
 
       if (sortField === 'aging') {
