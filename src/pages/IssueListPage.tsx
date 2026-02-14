@@ -17,8 +17,8 @@ import type { BulkAction } from '@/components/BulkActionBar'
 import { ISSUE_VIEWS } from '@/lib/savedViews'
 import { exportIssuesToExcel, exportFullWorkbook } from '@/lib/exportExcel'
 import { ISSUE_TYPE_LABELS, NEXT_ACTION_LABELS, NEXT_ACTION_COLORS } from '@/lib/constants'
-import { STAGE_LABELS } from '@/types/database'
-import type { IssueStatus } from '@/types/database'
+import { STAGE_LABELS, MODULE_LABELS } from '@/types/database'
+import type { IssueStatus, ModuleType } from '@/types/database'
 
 export function IssueListPage() {
   const navigate = useNavigate()
@@ -30,16 +30,17 @@ export function IssueListPage() {
   const updateIssue = useUpdateIssue()
   const bulkUpdate = useBulkUpdateIssues()
 
-  // View mode: list or by_object
-  const viewMode = (searchParams.get('view') as 'list' | 'by_object') || 'list'
-  const setViewMode = (mode: 'list' | 'by_object') => {
+  // View mode: list, by_object, or by_module
+  type ViewMode = 'list' | 'by_object' | 'by_module'
+  const viewMode = (searchParams.get('view') as ViewMode) || 'list'
+  const setViewMode = (mode: ViewMode) => {
     const next = new URLSearchParams(searchParams)
     if (mode === 'list') next.delete('view')
     else next.set('view', mode)
     setSearchParams(next, { replace: true })
   }
 
-  // Collapsed state for by_object view
+  // Collapsed state for grouped views
   const [collapsedObjects, setCollapsedObjects] = useState<Set<string>>(new Set())
 
   const toggleCollapse = (objectName: string) => {
@@ -57,14 +58,12 @@ export function IssueListPage() {
     const groups = new Map<string, IssueWithObject[]>()
     const addToGroup = (name: string, issue: IssueWithObject) => {
       if (!groups.has(name)) groups.set(name, [])
-      // Avoid duplicates if issue already in group
       if (!groups.get(name)!.some(i => i.id === issue.id)) {
         groups.get(name)!.push(issue)
       }
     }
     for (const issue of issues) {
       addToGroup(issue.object_name || 'Unknown', issue)
-      // Also group under linked objects
       if (issue.linked_object_ids?.length && allObjects) {
         for (const oid of issue.linked_object_ids) {
           const obj = allObjects.find(o => o.id === oid)
@@ -74,6 +73,29 @@ export function IssueListPage() {
     }
     return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)))
   }, [issues, viewMode, allObjects])
+
+  // Hierarchy: Module → Object → Issues
+  const moduleHierarchy = useMemo(() => {
+    if (!issues || viewMode !== 'by_module') return null
+    const hierarchy = new Map<string, Map<string, IssueWithObject[]>>()
+    for (const issue of issues) {
+      const mod = issue.object_module || 'unknown'
+      if (!hierarchy.has(mod)) hierarchy.set(mod, new Map())
+      const objectMap = hierarchy.get(mod)!
+      const objName = issue.object_name || 'Unknown'
+      if (!objectMap.has(objName)) objectMap.set(objName, [])
+      objectMap.get(objName)!.push(issue)
+    }
+    // Sort modules, then objects within each module
+    return new Map(
+      [...hierarchy.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([mod, objects]) => [
+          mod,
+          new Map([...objects.entries()].sort(([a], [b]) => a.localeCompare(b))),
+        ])
+    )
+  }, [issues, viewMode])
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -170,17 +192,17 @@ export function IssueListPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold">Issues</h1>
           <div className="flex rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {(['list', 'by_object'] as const).map(mode => (
+            {([['list', 'List'], ['by_object', 'By Object'], ['by_module', 'By Module']] as const).map(([mode, label]) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
+                onClick={() => setViewMode(mode as ViewMode)}
                 className="h-7 px-3 text-[11px] font-medium cursor-pointer border-none"
                 style={{
                   backgroundColor: viewMode === mode ? 'var(--color-accent)' : 'transparent',
                   color: viewMode === mode ? '#fff' : 'var(--color-text-secondary)',
                 }}
               >
-                {mode === 'list' ? 'List' : 'By Object'}
+                {label}
               </button>
             ))}
           </div>
@@ -519,6 +541,178 @@ export function IssueListPage() {
                       ))}
                     </div>
                   </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* By Module hierarchy view */}
+      {issues && issues.length > 0 && viewMode === 'by_module' && moduleHierarchy && (
+        <div className="space-y-4">
+          {[...moduleHierarchy.entries()].map(([mod, objectMap]) => {
+            const modKey = `mod:${mod}`
+            const isModCollapsed = collapsedObjects.has(modKey)
+            const totalIssues = [...objectMap.values()].reduce((sum, arr) => sum + arr.length, 0)
+            return (
+              <div key={mod} className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+                {/* Module header */}
+                <button
+                  onClick={() => toggleCollapse(modKey)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left cursor-pointer border-none"
+                  style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                >
+                  <span className="text-xs">{isModCollapsed ? '\u25B6' : '\u25BC'}</span>
+                  <span className="text-sm font-bold">{MODULE_LABELS[mod as ModuleType] || mod}</span>
+                  <span className="ml-1 text-[11px] opacity-80">
+                    {objectMap.size} object{objectMap.size !== 1 ? 's' : ''} &middot; {totalIssues} issue{totalIssues !== 1 ? 's' : ''}
+                  </span>
+                </button>
+
+                {!isModCollapsed && (
+                  <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                    {[...objectMap.entries()].map(([objName, objIssues]) => {
+                      const objKey = `mod:${mod}:obj:${objName}`
+                      const isObjCollapsed = collapsedObjects.has(objKey)
+                      return (
+                        <div key={objName}>
+                          {/* Object sub-header */}
+                          <button
+                            onClick={() => toggleCollapse(objKey)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-left cursor-pointer border-none"
+                            style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}
+                          >
+                            <span className="text-xs pl-2" style={{ color: 'var(--color-text-secondary)' }}>
+                              {isObjCollapsed ? '\u25B6' : '\u25BC'}
+                            </span>
+                            <span className="text-sm font-semibold font-[family-name:var(--font-data)]">{objName}</span>
+                            <span
+                              className="ml-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-secondary)' }}
+                            >
+                              {objIssues.length}
+                            </span>
+                          </button>
+
+                          {!isObjCollapsed && (
+                            <>
+                              {/* Desktop rows */}
+                              <div className="hidden md:block">
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    {objIssues.map((issue, i) => (
+                                      <tr
+                                        key={issue.id}
+                                        onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
+                                        className="cursor-pointer transition-colors duration-150"
+                                        style={{
+                                          backgroundColor: selectedIds.has(issue.id)
+                                            ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                                            : i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)',
+                                        }}
+                                        onMouseEnter={e => {
+                                          if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
+                                        }}
+                                        onMouseLeave={e => {
+                                          if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)'
+                                        }}
+                                      >
+                                        <td className="w-8 px-2 py-2">
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(issue.id)}
+                                            onChange={() => toggleSelect(issue.id)}
+                                            onClick={e => e.stopPropagation()}
+                                            className="cursor-pointer accent-[var(--color-accent)]"
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2 text-xs font-medium max-w-[220px] truncate">{issue.title}</td>
+                                        <td className="px-3 py-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                          {ISSUE_TYPE_LABELS[issue.issue_type]}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                          <InlineStatusSelect
+                                            status={issue.status}
+                                            type="issue"
+                                            onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                          {issue.next_action ? (
+                                            <span
+                                              className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                                              style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                                            >
+                                              {NEXT_ACTION_LABELS[issue.next_action]}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
+                                          {issue.owner_alias || '-'}
+                                        </td>
+                                        <td className="px-3 py-2"><AgingBadge days={issue.age_days} type="issue" /></td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile cards */}
+                              <div className="md:hidden">
+                                {objIssues.map(issue => (
+                                  <div
+                                    key={issue.id}
+                                    onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
+                                    className="p-4 border-t cursor-pointer"
+                                    style={{
+                                      backgroundColor: selectedIds.has(issue.id)
+                                        ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                                        : 'var(--color-bg-primary)',
+                                      borderColor: 'var(--color-border)',
+                                    }}
+                                  >
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="font-medium text-sm truncate flex-1">{issue.title}</span>
+                                      <InlineStatusSelect
+                                        status={issue.status}
+                                        type="issue"
+                                        onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                      <span>{ISSUE_TYPE_LABELS[issue.issue_type]}</span>
+                                      {issue.next_action && (
+                                        <>
+                                          <span>&middot;</span>
+                                          <span
+                                            className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                                            style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                                          >
+                                            {NEXT_ACTION_LABELS[issue.next_action]}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-2">
+                                      <AgingBadge days={issue.age_days} type="issue" />
+                                      {issue.owner_alias && (
+                                        <span className="text-[10px] font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-tertiary)' }}>
+                                          {issue.owner_alias}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             )

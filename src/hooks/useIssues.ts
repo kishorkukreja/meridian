@@ -25,6 +25,7 @@ export function useIssues(filters?: Record<string, string>) {
 
       if (filters?.issue_type) query = query.eq('issue_type', filters.issue_type as IssueRow['issue_type'])
       if (filters?.lifecycle_stage) query = query.eq('lifecycle_stage', filters.lifecycle_stage as IssueRow['lifecycle_stage'])
+      if (filters?.next_action) query = query.eq('next_action', filters.next_action as any)
       if (filters?.module) query = query.eq('meridian_objects.module' as any, filters.module)
       if (filters?.search) query = query.ilike('title', `%${filters.search}%`)
 

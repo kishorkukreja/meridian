@@ -29,7 +29,7 @@ export function useFilters() {
   }, [setSearchParams])
 
   const activeFilterCount = useMemo(() => {
-    return Array.from(searchParams.keys()).filter(k => k !== 'sort' && k !== 'order').length
+    return Array.from(searchParams.keys()).filter(k => k !== 'sort' && k !== 'order' && k !== 'view').length
   }, [searchParams])
 
   return { filters, setFilter, clearFilters, activeFilterCount }

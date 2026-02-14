@@ -1,5 +1,5 @@
 import { LIFECYCLE_STAGES, STAGE_LABELS, MODULE_LABELS, CATEGORY_LABELS } from '@/types/database'
-import { STATUS_LABELS, ISSUE_STATUS_LABELS, ISSUE_TYPE_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS } from '@/lib/constants'
+import { STATUS_LABELS, ISSUE_STATUS_LABELS, ISSUE_TYPE_LABELS, SOURCE_SYSTEM_LABELS, REGION_LABELS, NEXT_ACTION_LABELS } from '@/lib/constants'
 
 interface FilterOption {
   value: string
@@ -29,6 +29,7 @@ const ALL_LABELS: Record<string, Record<string, string>> = {
   region: REGION_LABELS,
   issue_type: ISSUE_TYPE_LABELS,
   lifecycle_stage: Object.fromEntries(LIFECYCLE_STAGES.map(s => [s, STAGE_LABELS[s]])),
+  next_action: NEXT_ACTION_LABELS,
 }
 
 const FILTER_LABELS: Record<string, string> = {
@@ -40,6 +41,7 @@ const FILTER_LABELS: Record<string, string> = {
   region: 'Region',
   issue_type: 'Type',
   lifecycle_stage: 'Stage',
+  next_action: 'Next Action',
   search: 'Search',
 }
 
@@ -56,10 +58,11 @@ const ISSUE_FILTERS: FilterConfig[] = [
   { key: 'status', label: 'Status', options: Object.entries(ISSUE_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l })) },
   { key: 'issue_type', label: 'Type', options: Object.entries(ISSUE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l })) },
   { key: 'lifecycle_stage', label: 'Stage', options: LIFECYCLE_STAGES.map(s => ({ value: s, label: STAGE_LABELS[s] })) },
+  { key: 'next_action', label: 'Next Action', options: Object.entries(NEXT_ACTION_LABELS).map(([v, l]) => ({ value: v, label: l })) },
   { key: 'module', label: 'Module', options: Object.entries(MODULE_LABELS).map(([v, l]) => ({ value: v, label: l })) },
 ]
 
-const IGNORED_FILTER_KEYS = new Set(['sort', 'order', 'is_archived'])
+const IGNORED_FILTER_KEYS = new Set(['sort', 'order', 'is_archived', 'view'])
 
 export function FilterBar({ type, filters, onFilterChange, onClear, activeCount }: Props) {
   const filterConfigs = type === 'objects' ? OBJECT_FILTERS : ISSUE_FILTERS
