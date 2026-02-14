@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useMeetings } from '@/hooks/useMeetings'
 import { EmptyState } from '@/components/EmptyState'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { SortSelect } from '@/components/SortSelect'
 
 export function MeetingListPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const { data: meetings, isLoading, error } = useMeetings(search || undefined)
+  const [sort, setSort] = useState('meeting_date')
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc')
+  const { data: meetings, isLoading, error } = useMeetings(search || undefined, sort, order)
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -22,15 +25,29 @@ export function MeetingListPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <input
-        type="text"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search meetings..."
-        className="w-full md:w-80 h-9 px-3 rounded-lg text-sm border outline-none"
-        style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-      />
+      {/* Search + Sort */}
+      <div className="flex flex-col md:flex-row gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search meetings..."
+          className="w-full md:w-80 h-9 px-3 rounded-lg text-sm border outline-none"
+          style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+        />
+        <SortSelect
+          options={[
+            { value: 'meeting_date:desc', label: 'Date (newest first)' },
+            { value: 'meeting_date:asc', label: 'Date (oldest first)' },
+            { value: 'title:asc', label: 'Title A-Z' },
+            { value: 'created_at:desc', label: 'Recently Added' },
+            { value: 'meeting_type:asc', label: 'Type A-Z' },
+          ]}
+          currentSort={sort}
+          currentOrder={order}
+          onSortChange={(s, o) => { setSort(s); setOrder(o) }}
+        />
+      </div>
 
       {isLoading && <LoadingSkeleton />}
       {error && <p className="text-sm" style={{ color: 'var(--color-status-red)' }}>Failed to load meetings.</p>}

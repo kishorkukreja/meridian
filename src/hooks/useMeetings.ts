@@ -3,16 +3,19 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import type { MeetingRow, MeetingWithLinks, MeetingType } from '@/types/database'
 
-export function useMeetings(search?: string) {
+export function useMeetings(search?: string, sort?: string, order?: string) {
   const { user } = useAuth()
 
   return useQuery({
-    queryKey: ['meetings', search],
+    queryKey: ['meetings', search, sort, order],
     queryFn: async (): Promise<MeetingRow[]> => {
+      const sortField = sort || 'meeting_date'
+      const ascending = order === 'asc'
+
       let query = supabase
         .from('meridian_meetings')
         .select('*')
-        .order('meeting_date', { ascending: false })
+        .order(sortField as keyof MeetingRow, { ascending })
 
       if (search) query = query.ilike('title', `%${search}%`)
 

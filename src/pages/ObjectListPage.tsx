@@ -12,6 +12,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { InlineStatusSelect } from '@/components/InlineStatusSelect'
 import { ViewChips } from '@/components/ViewChips'
 import { ExportDropdown } from '@/components/ExportDropdown'
+import { SortSelect } from '@/components/SortSelect'
 import { BulkActionBar } from '@/components/BulkActionBar'
 import type { BulkAction } from '@/components/BulkActionBar'
 import { OBJECT_VIEWS } from '@/lib/savedViews'
@@ -78,6 +79,25 @@ export function ObjectListPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Objects</h1>
         <div className="flex gap-2">
+          <SortSelect
+            options={[
+              { value: 'created_at:desc', label: 'Newest First' },
+              { value: 'created_at:asc', label: 'Oldest First' },
+              { value: 'module:asc', label: 'Module A-Z' },
+              { value: 'category:asc', label: 'Category A-Z' },
+              { value: 'status:asc', label: 'Status A-Z' },
+              { value: 'current_stage:asc', label: 'Stage (earliest first)' },
+              { value: 'current_stage:desc', label: 'Stage (latest first)' },
+              { value: 'stage_entered_at:asc', label: 'Aging (longest first)' },
+              { value: 'name:asc', label: 'Name A-Z' },
+            ]}
+            currentSort={filters.sort || 'created_at'}
+            currentOrder={(filters.order as 'asc' | 'desc') || 'desc'}
+            onSortChange={(sort, order) => {
+              setFilter('sort', sort)
+              setFilter('order', order)
+            }}
+          />
           <ExportDropdown
             onExportFiltered={() => objects && exportObjectsToExcel(objects)}
             onExportAll={() => allObjects && allIssues && exportFullWorkbook(allObjects, allIssues)}

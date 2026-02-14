@@ -12,6 +12,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { InlineStatusSelect } from '@/components/InlineStatusSelect'
 import { ViewChips } from '@/components/ViewChips'
 import { ExportDropdown } from '@/components/ExportDropdown'
+import { SortSelect } from '@/components/SortSelect'
 import { BulkActionBar } from '@/components/BulkActionBar'
 import type { BulkAction } from '@/components/BulkActionBar'
 import { ISSUE_VIEWS } from '@/lib/savedViews'
@@ -208,6 +209,23 @@ export function IssueListPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <SortSelect
+            options={[
+              { value: 'created_at:desc', label: 'Newest First' },
+              { value: 'created_at:asc', label: 'Oldest First' },
+              { value: 'title:asc', label: 'Title A-Z' },
+              { value: 'issue_type:asc', label: 'Type A-Z' },
+              { value: 'lifecycle_stage:asc', label: 'Stage (earliest first)' },
+              { value: 'status:asc', label: 'Status A-Z' },
+              { value: 'next_action:asc', label: 'Next Action A-Z' },
+            ]}
+            currentSort={filters.sort || 'created_at'}
+            currentOrder={(filters.order as 'asc' | 'desc') || 'desc'}
+            onSortChange={(sort, order) => {
+              setFilter('sort', sort)
+              setFilter('order', order)
+            }}
+          />
           <ExportDropdown
             onExportFiltered={() => issues && exportIssuesToExcel(issues)}
             onExportAll={() => allObjects && allIssues && exportFullWorkbook(allObjects, allIssues)}
