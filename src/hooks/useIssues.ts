@@ -10,9 +10,14 @@ export function useIssues(filters?: Record<string, string>) {
   return useQuery({
     queryKey: ['issues', filters],
     queryFn: async (): Promise<IssueWithObject[]> => {
+      // Use !inner join when filtering by module so PostgREST filters parent rows
+      const objectJoin = filters?.module
+        ? 'meridian_objects!meridian_issues_object_id_fkey!inner(name, module)'
+        : 'meridian_objects!meridian_issues_object_id_fkey(name, module)'
+
       let query = supabase
         .from('meridian_issues')
-        .select('*, meridian_objects!meridian_issues_object_id_fkey(name, module)')
+        .select(`*, ${objectJoin}`)
         .eq('is_archived', filters?.is_archived === 'true' ? true : false)
 
       if (filters?.status) {
