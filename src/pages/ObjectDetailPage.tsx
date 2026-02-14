@@ -97,6 +97,13 @@ export function ObjectDetailPage() {
         <div className="flex gap-2 shrink-0">
           <AgingBadge days={object.aging_days} />
           <button
+            onClick={() => navigate(`/objects/new?copy_from=${id}`)}
+            className="h-8 px-3 rounded text-xs cursor-pointer border"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+          >
+            Duplicate
+          </button>
+          <button
             onClick={() => navigate(`/objects/${id}/edit`)}
             className="h-8 px-3 rounded text-xs cursor-pointer border"
             style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}

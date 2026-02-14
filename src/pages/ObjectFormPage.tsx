@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { useObject, useCreateObject, useUpdateObject, useObjectNames } from '@/hooks/useObjects'
 import { LIFECYCLE_STAGES, STAGE_LABELS, MODULE_LABELS, CATEGORY_LABELS, MODULE_CATEGORIES } from '@/types/database'
@@ -10,8 +10,11 @@ import type { SourceSystem } from '@/types/database'
 export function ObjectFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const copyFromId = searchParams.get('copy_from') || undefined
   const isEdit = !!id
   const { data: existing } = useObject(id)
+  const { data: copySource } = useObject(copyFromId)
   const createObject = useCreateObject()
   const updateObject = useUpdateObject()
   const { data: existingNames } = useObjectNames()
@@ -46,6 +49,24 @@ export function ObjectFormPage() {
       setNameManuallyEdited(true) // Don't auto-suggest for edits
     }
   }, [existing])
+
+  // Pre-fill from copy source (duplicate)
+  useEffect(() => {
+    if (copySource && !isEdit) {
+      setName(`Copy of ${copySource.name}`)
+      setDescription(copySource.description || '')
+      setModule(copySource.module)
+      setCategory(copySource.category)
+      setRegion(copySource.region)
+      setSourceSystem(copySource.source_system)
+      setCurrentStage('requirements')
+      setStatus('on_track')
+      setOwnerAlias(copySource.owner_alias || '')
+      setTeamAlias(copySource.team_alias || '')
+      setNotes(copySource.notes || '')
+      setNameManuallyEdited(true)
+    }
+  }, [copySource, isEdit])
 
   const availableCategories = MODULE_CATEGORIES[module]
 
@@ -108,7 +129,7 @@ export function ObjectFormPage() {
         &larr; Back
       </button>
 
-      <h1 className="text-lg font-bold mb-6">{isEdit ? 'Edit Object' : 'Create Object'}</h1>
+      <h1 className="text-lg font-bold mb-6">{isEdit ? 'Edit Object' : copyFromId ? 'Duplicate Object' : 'Create Object'}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
