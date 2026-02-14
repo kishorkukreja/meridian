@@ -16,7 +16,8 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
   "next_steps": [
     {"action": "description of action", "owner": "person responsible", "due_date": "YYYY-MM-DD"}
   ],
-  "action_log": "YYYY-MM-DD | Action 1\\nYYYY-MM-DD | Action 2"
+  "action_log": "YYYY-MM-DD | Action 1\\nYYYY-MM-DD | Action 2",
+  "quote": "A short witty or inspiring quote relevant to the meeting topic"
 }
 
 Rules:
@@ -24,6 +25,7 @@ Rules:
 - discussion_points: 3-4 high-level topics discussed (not granular details)
 - next_steps: extract concrete action items with owner and realistic due dates
 - action_log: pre-formatted string, one line per action, format "YYYY-MM-DD | Action description"
+- quote: a short, witty, or inspiring quote (real or original) that relates to the meeting's theme or key topics. Keep it to 1-2 sentences with attribution. Make it fun and memorable.
 - If owner or due_date cannot be determined, use "TBD"
 - Dates in action_log should match the next_steps due dates`
 
@@ -35,13 +37,15 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
   "discussion_points": ["topic 1", "topic 2", "topic 3"],
   "next_steps": [
     {"action": "specific actionable task", "owner": "TBD", "due_date": "TBD"}
-  ]
+  ],
+  "quote": "A short witty or inspiring quote relevant to the conversation topic"
 }
 
 Rules:
 - tldr: 2-3 sentences summarizing the conversation's purpose, key decisions, and outcomes
 - discussion_points: 4-8 topics/themes covered in the conversation
 - next_steps: extract EVERY actionable item, task, to-do, or follow-up mentioned. Be aggressive — if something sounds like work that needs doing, include it. Set owner and due_date to "TBD" unless explicitly stated.
+- quote: a short, witty, or inspiring quote (real or original) that relates to the conversation's theme. Keep it to 1-2 sentences with attribution. Make it fun and memorable.
 - Focus on concrete deliverables, not abstract discussion topics`
 
 const QUICK_SUMMARY_PROMPT = `You are a meeting summary assistant. Someone missed this meeting and needs a quick catch-up. Analyze the transcript and provide a concise summary with key takeaways and action items.
@@ -52,13 +56,15 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
   "discussion_points": ["key point 1", "key point 2", "key point 3", "key point 4"],
   "next_steps": [
     {"action": "description of action item", "owner": "person responsible", "due_date": "YYYY-MM-DD"}
-  ]
+  ],
+  "quote": "A short witty or inspiring quote relevant to the meeting topic"
 }
 
 Rules:
 - tldr: 2-3 sentences that give someone who missed the meeting a clear picture of what happened and what was decided
 - discussion_points: 4-6 high-level bullet points covering the main topics, decisions, and any concerns raised
 - next_steps: extract ALL action items mentioned, with owner and due date. If owner or due_date cannot be determined, use "TBD"
+- quote: a short, witty, or inspiring quote (real or original) that relates to the meeting's theme. Keep it to 1-2 sentences with attribution. Make it fun and memorable.
 - Focus on "what do I need to know" and "what do I need to do" — skip pleasantries and filler`
 
 Deno.serve(async (req: Request) => {

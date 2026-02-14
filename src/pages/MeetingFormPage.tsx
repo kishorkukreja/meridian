@@ -13,6 +13,7 @@ type GeneratedMoM = {
   discussion_points: string[]
   next_steps: NextStep[]
   action_log?: string
+  quote?: string
   model_used: string
 }
 
@@ -108,6 +109,7 @@ export function MeetingFormPage() {
       next_steps: mom.next_steps,
       action_log: mom.action_log,
       model_used: generated!.model_used,
+      quote: generated!.quote || null,
       linked_object_ids: linkedObjectIds,
       linked_issue_ids: linkedIssueIds,
     }

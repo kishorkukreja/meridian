@@ -218,6 +218,7 @@ export type MeetingRow = {
   next_steps: NextStep[] | null;
   action_log: string | null;
   model_used: string | null;
+  quote: string | null;
   linked_object_ids: string[];
   linked_issue_ids: string[];
   created_at: string;

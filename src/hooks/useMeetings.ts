@@ -135,6 +135,7 @@ type MoMResponse = {
   discussion_points: string[]
   next_steps: { action: string; owner: string; due_date: string }[]
   action_log: string
+  quote: string
   model_used: string
 }
 

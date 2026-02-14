@@ -37,23 +37,19 @@ export function MeetingDetailPage() {
   const isQuickSummary = meeting.meeting_type === 'quick_summary'
   const isAiConversation = meeting.meeting_type === 'ai_conversation'
 
-  const QUOTES = [
+  const FALLBACK_QUOTES = [
     '"A meeting is an event where minutes are kept and hours are lost." - Unknown',
     '"The best meeting is the one that never happens." - Someone who values your time',
-    '"If you had to identify, in one word, the reason the human race has not achieved its full potential, that word would be meetings." - Dave Barry',
-    '"Meetings: where great ideas go to get bullet-pointed." - Corporate Wisdom',
-    '"The length of a meeting rises with the square of the number of people present." - Eileen Shanahan',
     '"I survived another meeting that should have been an email." - Every Employee Ever',
     '"People who enjoy meetings should not be in charge of anything." - Thomas Sowell',
-    '"A committee is a group of people who individually can do nothing, but who, as a group, can meet and decide that nothing can be done." - Fred Allen',
-    '"The most dangerous phrase in business is: Let\'s schedule a meeting about it." - Unknown',
     '"You don\'t need more meetings. You need more clarity." - Someone who left early',
   ]
 
   const getQuote = () => {
-    // Use meeting id as seed for consistent quote per meeting
+    if (meeting.quote) return meeting.quote
+    // Fallback for older meetings without LLM-generated quote
     const hash = meeting.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-    return QUOTES[hash % QUOTES.length]
+    return FALLBACK_QUOTES[hash % FALLBACK_QUOTES.length]
   }
 
   const generateEmailBody = () => {
