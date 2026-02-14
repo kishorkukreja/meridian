@@ -1,9 +1,19 @@
 import { useState } from 'react'
 import { useComments, useCreateComment } from '@/hooks/useComments'
 
+export interface EmailContext {
+  issueTitle: string
+  objectName: string
+  issueType: string
+  lifecycleStage: string
+  status: string
+  ownerAlias?: string | null
+}
+
 interface Props {
   entityType: 'object' | 'issue'
   entityId: string
+  emailContext?: EmailContext
 }
 
 const ALIAS_STORAGE_KEY = 'meridian_author_alias'
@@ -29,12 +39,14 @@ function formatTimestamp(iso: string): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function CommentSection({ entityType, entityId }: Props) {
+export function CommentSection({ entityType, entityId, emailContext }: Props) {
   const { data: comments, isLoading } = useComments(entityType, entityId)
   const createComment = useCreateComment()
   const [body, setBody] = useState('')
   const [alias, setAlias] = useState(getStoredAlias)
   const [showAliasInput, setShowAliasInput] = useState(!getStoredAlias())
+  const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const handleSubmit = () => {
     if (!body.trim()) return
@@ -56,6 +68,50 @@ export function CommentSection({ entityType, entityId }: Props) {
       e.preventDefault()
       handleSubmit()
     }
+  }
+
+  const openEmailDraft = (commentBody: string, commentAuthor: string) => {
+    if (!emailContext) return
+    const subject = `[S&OP] ${emailContext.issueTitle} — ${emailContext.objectName}`
+    const emailBody = [
+      `Hi,`,
+      ``,
+      `Sharing an update regarding the following issue:`,
+      ``,
+      `Issue: ${emailContext.issueTitle}`,
+      `Object: ${emailContext.objectName}`,
+      `Type: ${emailContext.issueType}`,
+      `Stage: ${emailContext.lifecycleStage}`,
+      `Status: ${emailContext.status}`,
+      emailContext.ownerAlias ? `Owner: ${emailContext.ownerAlias}` : '',
+      ``,
+      `--- Comment by ${commentAuthor} ---`,
+      ``,
+      commentBody,
+      ``,
+      `---`,
+      ``,
+      `Please review and let me know if any action is needed.`,
+      ``,
+      `Regards`,
+    ].filter(Boolean).join('\n')
+
+    setEmailDraft({ subject, body: emailBody })
+    setCopied(false)
+  }
+
+  const handleCopyEmail = async () => {
+    if (!emailDraft) return
+    const text = `Subject: ${emailDraft.subject}\n\n${emailDraft.body}`
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleOpenMailto = () => {
+    if (!emailDraft) return
+    const mailto = `mailto:?subject=${encodeURIComponent(emailDraft.subject)}&body=${encodeURIComponent(emailDraft.body)}`
+    window.open(mailto, '_blank')
   }
 
   return (
@@ -147,19 +203,94 @@ export function CommentSection({ entityType, entityId }: Props) {
         <div className="space-y-3">
           {comments.map(comment => (
             <div key={comment.id} className="p-3 rounded" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-medium font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-primary)' }}>
-                  {comment.author_alias || 'Anonymous'}
-                </span>
-                <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
-                  {formatTimestamp(comment.created_at)}
-                </span>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-primary)' }}>
+                    {comment.author_alias || 'Anonymous'}
+                  </span>
+                  <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {formatTimestamp(comment.created_at)}
+                  </span>
+                </div>
+                {emailContext && (
+                  <button
+                    onClick={() => openEmailDraft(comment.body, comment.author_alias || 'Anonymous')}
+                    className="h-6 w-6 flex items-center justify-center rounded cursor-pointer border-none opacity-40 hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+                    title="Use as email"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="M22 7L13.03 12.7a1.94 1.94 0 01-2.06 0L2 7" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>
                 {comment.body}
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Email Draft Modal */}
+      {emailDraft && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-lg p-6 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold">Email Draft</h2>
+              <button
+                onClick={() => setEmailDraft(null)}
+                className="text-sm cursor-pointer border-none bg-transparent"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <label className="block text-[10px] mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Subject</label>
+            <input
+              type="text"
+              value={emailDraft.subject}
+              onChange={e => setEmailDraft({ ...emailDraft, subject: e.target.value })}
+              className="w-full h-9 px-3 rounded-lg text-sm border outline-none mb-3"
+              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+            />
+
+            <label className="block text-[10px] mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Body</label>
+            <textarea
+              value={emailDraft.body}
+              onChange={e => setEmailDraft({ ...emailDraft, body: e.target.value })}
+              rows={12}
+              className="w-full px-3 py-2 rounded-lg text-sm border outline-none resize-y mb-4 font-mono"
+              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEmailDraft(null)}
+                className="h-9 px-4 text-sm cursor-pointer border-none bg-transparent"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCopyEmail}
+                className="h-9 px-4 rounded-lg text-sm cursor-pointer border"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: copied ? 'var(--color-status-green)' : 'var(--color-text-secondary)' }}
+              >
+                {copied ? 'Copied!' : 'Copy All'}
+              </button>
+              <button
+                onClick={handleOpenMailto}
+                className="h-9 px-4 rounded-lg text-sm font-medium cursor-pointer border-none"
+                style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+              >
+                Open in Email Client
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -172,7 +172,18 @@ export function IssueDetailPage() {
       )}
 
       {/* Comments */}
-      <CommentSection entityType="issue" entityId={issue.id} />
+      <CommentSection
+        entityType="issue"
+        entityId={issue.id}
+        emailContext={{
+          issueTitle: issue.title,
+          objectName: issue.object_name,
+          issueType: ISSUE_TYPE_LABELS[issue.issue_type],
+          lifecycleStage: STAGE_LABELS[issue.lifecycle_stage],
+          status: ISSUE_STATUS_LABELS[issue.status] || issue.status,
+          ownerAlias: issue.owner_alias,
+        }}
+      />
 
       {/* Action buttons */}
       <div className="flex gap-2">
