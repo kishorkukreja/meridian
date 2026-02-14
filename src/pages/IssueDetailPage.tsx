@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useIssue, useUpdateIssue } from '@/hooks/useIssues'
 import { useObjects } from '@/hooks/useObjects'
 import { StatusBadge } from '@/components/StatusBadge'
+import { PinButton } from '@/components/PinButton'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { CommentSection } from '@/components/CommentSection'
@@ -57,7 +58,10 @@ export function IssueDetailPage() {
       {/* Header */}
       <div>
         <div className="flex items-start justify-between gap-4 mb-2">
-          <h1 className="text-xl font-bold">{issue.title}</h1>
+          <div className="flex items-center gap-2">
+            <PinButton entityType="issue" entityId={issue.id} />
+            <h1 className="text-xl font-bold">{issue.title}</h1>
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             <AgingBadge days={issue.age_days} type="issue" />
             <StatusBadge status={issue.status} type="issue" />

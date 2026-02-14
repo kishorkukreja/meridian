@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/lib/AuthContext'
+import { ThemeProvider } from '@/lib/ThemeContext'
 import { Layout } from '@/components/Layout'
 import { LoginPage } from '@/pages/LoginPage'
 import { ObjectListPage } from '@/pages/ObjectListPage'
@@ -20,6 +21,7 @@ import { SchedulePage } from '@/pages/SchedulePage'
 import { RecurringMeetingFormPage } from '@/pages/RecurringMeetingFormPage'
 import { RecurringMeetingListPage } from '@/pages/RecurringMeetingListPage'
 import { ApiTokensPage } from '@/pages/ApiTokensPage'
+import { ImportPage } from '@/pages/ImportPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -49,6 +51,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
@@ -75,6 +78,7 @@ export default function App() {
                 <Route path="/schedule/new" element={<RecurringMeetingFormPage />} />
                 <Route path="/schedule/:id/edit" element={<RecurringMeetingFormPage />} />
                 <Route path="/settings/api" element={<ApiTokensPage />} />
+                <Route path="/import" element={<ImportPage />} />
                 <Route path="/archive" element={<ArchivePage />} />
               </Route>
             </Routes>
@@ -82,5 +86,6 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
+    </ThemeProvider>
   )
 }

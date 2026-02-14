@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useObject, useObjectIssues, useStageHistory, useUpdateObject } from '@/hooks/useObjects'
 import { StatusBadge } from '@/components/StatusBadge'
+import { PinButton } from '@/components/PinButton'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LifecycleStepper } from '@/components/LifecycleStepper'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
@@ -78,6 +79,7 @@ export function ObjectDetailPage() {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
+            <PinButton entityType="object" entityId={object.id} />
             <h1 className="text-xl font-bold font-[family-name:var(--font-data)]">{object.name}</h1>
             <StatusBadge status={object.status} />
           </div>

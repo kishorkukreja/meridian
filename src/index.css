@@ -72,6 +72,17 @@ body {
   background: var(--color-text-tertiary);
 }
 
+/* Light theme overrides */
+html.light {
+  --color-bg-primary: #F8F9FB;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #EFF1F5;
+  --color-border: #D1D5DB;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #9CA3AF;
+}
+
 /* Focus ring */
 *:focus-visible {
   outline: 2px solid var(--color-accent);

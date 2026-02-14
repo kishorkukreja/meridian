@@ -188,6 +188,14 @@ export type CommentRow = {
   created_at: string;
 }
 
+export type PinRow = {
+  id: string;
+  user_id: string;
+  entity_type: 'object' | 'issue';
+  entity_id: string;
+  created_at: string;
+}
+
 export type NextStep = {
   action: string;
   owner: string;
@@ -475,6 +483,23 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'meridian_api_tokens_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      meridian_pins: {
+        Row: PinRow;
+        Insert: Omit<PinRow, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<PinRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_pins_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';

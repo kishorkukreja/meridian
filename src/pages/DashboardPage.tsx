@@ -5,6 +5,9 @@ import { useObjects } from '@/hooks/useObjects'
 import { useIssues } from '@/hooks/useIssues'
 import { useMeetings } from '@/hooks/useMeetings'
 import { useScheduleOccurrences } from '@/hooks/useSchedule'
+import { usePinnedObjects, usePinnedIssues } from '@/hooks/usePins'
+import { PinButton } from '@/components/PinButton'
+import { StatusBadge } from '@/components/StatusBadge'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MODULE_LABELS, ISSUE_STATUS_LABELS, NEXT_ACTION_LABELS, NEXT_ACTION_COLORS, ISSUE_TYPE_LABELS } from '@/lib/constants'
 import { LIFECYCLE_STAGES, STAGE_LABELS } from '@/types/database'
@@ -52,6 +55,8 @@ export function DashboardPage() {
   const { data: objects, isLoading: objLoading } = useObjects()
   const { data: issues, isLoading: issLoading } = useIssues()
   const { data: meetings, isLoading: mtgLoading } = useMeetings()
+  const { data: pinnedObjects } = usePinnedObjects()
+  const { data: pinnedIssues } = usePinnedIssues()
   const weekRange = useMemo(() => getWeekRange(), [])
   const { data: occurrences } = useScheduleOccurrences(weekRange.start, weekRange.end)
 
@@ -112,6 +117,9 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* Pinned Items */}
+      <PinnedItems pinnedObjects={pinnedObjects || []} pinnedIssues={pinnedIssues || []} navigate={navigate} />
+
       {/* Pipeline Funnel */}
       <PipelineFunnel objects={allObjects} onStageClick={(s) => navigate(`/objects?current_stage=${s}`)} />
 
@@ -162,6 +170,55 @@ function KpiCard({ label, value, sub, color, onClick }: {
       </p>
       {sub && <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-tertiary)' }}>{sub}</p>}
     </button>
+  )
+}
+
+function PinnedItems({ pinnedObjects, pinnedIssues, navigate }: {
+  pinnedObjects: ObjectWithComputed[]
+  pinnedIssues: IssueWithObject[]
+  navigate: (path: string) => void
+}) {
+  if (pinnedObjects.length === 0 && pinnedIssues.length === 0) {
+    return (
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+        <h2 className="text-sm font-semibold mb-2">Pinned Items</h2>
+        <p className="text-xs text-center py-3" style={{ color: 'var(--color-text-tertiary)' }}>
+          Star objects or issues to pin them here for quick access.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+      <h2 className="text-sm font-semibold mb-3">Pinned Items</h2>
+      <div className="space-y-1.5">
+        {pinnedObjects.map(obj => (
+          <button
+            key={obj.id}
+            onClick={() => navigate(`/objects/${obj.id}`)}
+            className="w-full flex items-center gap-2.5 p-2 rounded cursor-pointer border-none text-left transition-colors duration-150"
+            style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+          >
+            <PinButton entityType="object" entityId={obj.id} />
+            <span className="text-xs font-medium truncate flex-1">{obj.name}</span>
+            <StatusBadge status={obj.status} />
+          </button>
+        ))}
+        {pinnedIssues.map(issue => (
+          <button
+            key={issue.id}
+            onClick={() => navigate(`/issues/${issue.id}`)}
+            className="w-full flex items-center gap-2.5 p-2 rounded cursor-pointer border-none text-left transition-colors duration-150"
+            style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+          >
+            <PinButton entityType="issue" entityId={issue.id} />
+            <span className="text-xs font-medium truncate flex-1">{issue.title}</span>
+            <StatusBadge status={issue.status} type="issue" />
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
