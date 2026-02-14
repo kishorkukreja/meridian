@@ -17,7 +17,7 @@ export type LifecycleStage =
   | 'signoff'
   | 'live';
 
-export type ModuleType = 'demand_planning' | 'supply_planning';
+export type ModuleType = 'demand_planning' | 'supply_planning' | 'supply_planning_ibp' | 'data_infrastructure' | 'program_management';
 
 export type ObjectCategory =
   | 'master_data'
@@ -102,6 +102,9 @@ export const STAGE_LABELS: Record<LifecycleStage, string> = {
 export const MODULE_LABELS: Record<ModuleType, string> = {
   demand_planning: 'Demand Planning',
   supply_planning: 'Supply Planning',
+  supply_planning_ibp: 'Supply Planning - IBP',
+  data_infrastructure: 'Data Infrastructure & Enterprise',
+  program_management: 'Program Management',
 };
 
 export const CATEGORY_LABELS: Record<ObjectCategory, string> = {
@@ -115,6 +118,9 @@ export const CATEGORY_LABELS: Record<ObjectCategory, string> = {
 export const MODULE_CATEGORIES: Record<ModuleType, ObjectCategory[]> = {
   demand_planning: ['master_data', 'drivers'],
   supply_planning: ['master_data', 'priority_1', 'priority_2', 'priority_3'],
+  supply_planning_ibp: ['master_data', 'priority_1', 'priority_2', 'priority_3'],
+  data_infrastructure: ['master_data', 'priority_1', 'priority_2', 'priority_3'],
+  program_management: ['master_data', 'priority_1', 'priority_2', 'priority_3'],
 };
 
 // ============================================

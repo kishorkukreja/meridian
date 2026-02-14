@@ -3,6 +3,9 @@ import type { ModuleType, ObjectCategory } from '@/types/database'
 export const MODULE_CODES: Record<ModuleType, string> = {
   demand_planning: 'DP',
   supply_planning: 'SP',
+  supply_planning_ibp: 'SI',
+  data_infrastructure: 'DI',
+  program_management: 'PM',
 }
 
 export const CATEGORY_CODES: Record<ObjectCategory, string> = {
