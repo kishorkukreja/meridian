@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useComments, useCreateComment } from '@/hooks/useComments'
+import { useComments, useCreateComment, usePolishEmail } from '@/hooks/useComments'
 
 export interface EmailContext {
   issueTitle: string
@@ -42,10 +42,13 @@ function formatTimestamp(iso: string): string {
 export function CommentSection({ entityType, entityId, emailContext }: Props) {
   const { data: comments, isLoading } = useComments(entityType, entityId)
   const createComment = useCreateComment()
+  const polishEmail = usePolishEmail()
   const [body, setBody] = useState('')
   const [alias, setAlias] = useState(getStoredAlias)
   const [showAliasInput, setShowAliasInput] = useState(!getStoredAlias())
   const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
+  const [polishing, setPolishing] = useState(false)
+  const [polishError, setPolishError] = useState('')
   const [copied, setCopied] = useState(false)
 
   const handleSubmit = () => {
@@ -70,34 +73,33 @@ export function CommentSection({ entityType, entityId, emailContext }: Props) {
     }
   }
 
-  const openEmailDraft = (commentBody: string, commentAuthor: string) => {
+  const openEmailDraft = async (commentBody: string, commentAuthor: string) => {
     if (!emailContext) return
-    const subject = `[S&OP] ${emailContext.issueTitle} — ${emailContext.objectName}`
-    const emailBody = [
-      `Hi,`,
-      ``,
-      `Sharing an update regarding the following issue:`,
-      ``,
-      `Issue: ${emailContext.issueTitle}`,
-      `Object: ${emailContext.objectName}`,
-      `Type: ${emailContext.issueType}`,
-      `Stage: ${emailContext.lifecycleStage}`,
-      `Status: ${emailContext.status}`,
-      emailContext.ownerAlias ? `Owner: ${emailContext.ownerAlias}` : '',
-      ``,
-      `--- Comment by ${commentAuthor} ---`,
-      ``,
-      commentBody,
-      ``,
-      `---`,
-      ``,
-      `Please review and let me know if any action is needed.`,
-      ``,
-      `Regards`,
-    ].filter(Boolean).join('\n')
-
-    setEmailDraft({ subject, body: emailBody })
+    setPolishing(true)
+    setPolishError('')
     setCopied(false)
+
+    try {
+      const result = await polishEmail.mutateAsync({
+        comment: commentBody,
+        context: { ...emailContext, commentAuthor },
+      })
+      setEmailDraft({ subject: result.subject, body: result.body })
+    } catch (err) {
+      // Fallback to basic template if LLM fails
+      setPolishError('AI polish failed — showing basic draft instead.')
+      const subject = `[S&OP] ${emailContext.issueTitle} — ${emailContext.objectName}`
+      const emailBody = [
+        `Sharing an update on "${emailContext.issueTitle}" (${emailContext.objectName}, ${emailContext.lifecycleStage}).`,
+        ``,
+        commentBody,
+        ``,
+        `Please review and let me know if any action is needed.`,
+      ].join('\n')
+      setEmailDraft({ subject, body: emailBody })
+    } finally {
+      setPolishing(false)
+    }
   }
 
   const handleCopyEmail = async () => {
@@ -215,14 +217,19 @@ export function CommentSection({ entityType, entityId, emailContext }: Props) {
                 {emailContext && (
                   <button
                     onClick={() => openEmailDraft(comment.body, comment.author_alias || 'Anonymous')}
-                    className="h-6 w-6 flex items-center justify-center rounded cursor-pointer border-none opacity-40 hover:opacity-100 transition-opacity"
+                    disabled={polishing}
+                    className="h-6 px-1.5 flex items-center justify-center gap-1 rounded cursor-pointer border-none opacity-40 hover:opacity-100 transition-opacity disabled:opacity-20"
                     style={{ backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
-                    title="Use as email"
+                    title="Draft email from this comment"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
-                      <path d="M22 7L13.03 12.7a1.94 1.94 0 01-2.06 0L2 7" />
-                    </svg>
+                    {polishing ? (
+                      <span className="text-[9px]">drafting...</span>
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="M22 7L13.03 12.7a1.94 1.94 0 01-2.06 0L2 7" />
+                      </svg>
+                    )}
                   </button>
                 )}
               </div>
@@ -238,6 +245,11 @@ export function CommentSection({ entityType, entityId, emailContext }: Props) {
       {emailDraft && (
         <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <div className="w-full max-w-lg p-6 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            {polishError && (
+              <p className="text-[10px] px-3 py-1.5 rounded mb-3" style={{ backgroundColor: 'color-mix(in srgb, var(--color-status-amber) 15%, transparent)', color: 'var(--color-status-amber)' }}>
+                {polishError}
+              </p>
+            )}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold">Email Draft</h2>
               <button

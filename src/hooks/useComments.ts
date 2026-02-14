@@ -22,6 +22,45 @@ export function useComments(entityType: 'object' | 'issue', entityId: string | u
   })
 }
 
+export function usePolishEmail() {
+  return useMutation({
+    mutationFn: async (payload: {
+      comment: string
+      context: {
+        issueTitle: string
+        objectName: string
+        issueType: string
+        lifecycleStage: string
+        status: string
+        ownerAlias?: string | null
+        commentAuthor: string
+      }
+    }): Promise<{ subject: string; body: string }> => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/polish-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to generate email')
+      }
+
+      return res.json()
+    },
+  })
+}
+
 export function useCreateComment() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
