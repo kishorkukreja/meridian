@@ -19,6 +19,7 @@ import { MeetingEditPage } from '@/pages/MeetingEditPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { RecurringMeetingFormPage } from '@/pages/RecurringMeetingFormPage'
 import { RecurringMeetingListPage } from '@/pages/RecurringMeetingListPage'
+import { ApiTokensPage } from '@/pages/ApiTokensPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/schedule/manage" element={<RecurringMeetingListPage />} />
                 <Route path="/schedule/new" element={<RecurringMeetingFormPage />} />
                 <Route path="/schedule/:id/edit" element={<RecurringMeetingFormPage />} />
+                <Route path="/settings/api" element={<ApiTokensPage />} />
                 <Route path="/archive" element={<ArchivePage />} />
               </Route>
             </Routes>

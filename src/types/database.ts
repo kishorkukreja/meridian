@@ -257,6 +257,31 @@ export type ScheduleOccurrence = {
 }
 
 // ============================================
+// API Token Types
+// ============================================
+
+export type ApiTokenScope = 'issues:read' | 'issues:write';
+
+export const API_TOKEN_SCOPES: { value: ApiTokenScope; label: string }[] = [
+  { value: 'issues:read', label: 'Read Issues' },
+  { value: 'issues:write', label: 'Write Issues' },
+];
+
+export type ApiTokenRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  token_hash: string;
+  token_prefix: string;
+  scopes: ApiTokenScope[];
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // Computed / Enriched Types (for UI)
 // ============================================
 
@@ -421,6 +446,24 @@ export type Database = {
             columns: ['recurring_meeting_id'];
             isOneToOne: false;
             referencedRelation: 'meridian_recurring_meetings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      meridian_api_tokens: {
+        Row: ApiTokenRow;
+        Insert: Omit<ApiTokenRow, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<ApiTokenRow, 'id' | 'user_id'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'meridian_api_tokens_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
