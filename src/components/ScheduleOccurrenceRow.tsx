@@ -16,7 +16,7 @@ export function ScheduleOccurrenceRow({ occurrence }: Props) {
   const attended = log?.attended ?? false
   const [notesOpen, setNotesOpen] = useState(false)
   const [notesValue, setNotesValue] = useState(log?.notes ?? '')
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     setNotesValue(log?.notes ?? '')

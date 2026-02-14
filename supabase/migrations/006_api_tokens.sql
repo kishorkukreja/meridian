@@ -1,6 +1,8 @@
 -- Migration: API Tokens for External Issues API
 -- Stores hashed API tokens for programmatic access to issues
 
+CREATE EXTENSION IF NOT EXISTS moddatetime WITH SCHEMA extensions;
+
 CREATE TABLE meridian_api_tokens (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -25,7 +27,7 @@ CREATE INDEX idx_api_tokens_user ON meridian_api_tokens(user_id);
 CREATE TRIGGER set_api_tokens_updated_at
   BEFORE UPDATE ON meridian_api_tokens
   FOR EACH ROW
-  EXECUTE FUNCTION moddatetime(updated_at);
+  EXECUTE FUNCTION extensions.moddatetime(updated_at);
 
 -- RLS
 ALTER TABLE meridian_api_tokens ENABLE ROW LEVEL SECURITY;

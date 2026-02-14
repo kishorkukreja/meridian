@@ -1,4 +1,4 @@
-import type { ObjectStatus, IssueStatus, LifecycleStage } from '@/types/database'
+import type { ObjectStatus, IssueStatus, LifecycleStage, NextAction } from '@/types/database'
 export { MODULE_LABELS, CATEGORY_LABELS } from '@/types/database'
 
 export const OBJECT_AGING_THRESHOLDS = {
@@ -63,6 +63,18 @@ export const ISSUE_TYPE_LABELS: Record<string, string> = {
   technical: 'Technical',
   clarification: 'Clarification',
   other: 'Other',
+}
+
+export const NEXT_ACTION_LABELS: Record<NextAction, string> = {
+  observe: 'Observe',
+  follow_up: 'Follow Up',
+  set_meeting: 'Set Meeting in Calendar',
+}
+
+export const NEXT_ACTION_COLORS: Record<NextAction, string> = {
+  observe: 'var(--color-status-blue)',
+  follow_up: 'var(--color-status-amber)',
+  set_meeting: 'var(--color-status-green)',
 }
 
 export const SOURCE_SYSTEM_LABELS: Record<string, string> = {

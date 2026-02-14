@@ -2,16 +2,19 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, type FormEvent } from 'react'
 import { useIssue, useCreateIssue, useUpdateIssue } from '@/hooks/useIssues'
 import { useObjects } from '@/hooks/useObjects'
+import { SearchableSelect } from '@/components/SearchableSelect'
 import { LIFECYCLE_STAGES, STAGE_LABELS } from '@/types/database'
-import { ISSUE_TYPE_LABELS, ISSUE_STATUS_LABELS } from '@/lib/constants'
-import type { LifecycleStage, IssueType, IssueStatus } from '@/types/database'
+import { ISSUE_TYPE_LABELS, ISSUE_STATUS_LABELS, NEXT_ACTION_LABELS } from '@/lib/constants'
+import type { LifecycleStage, IssueType, IssueStatus, NextAction } from '@/types/database'
 
 export function IssueFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isEdit = !!id
+  const copyFromId = searchParams.get('copy_from') || undefined
   const { data: existing } = useIssue(id)
+  const { data: copySource } = useIssue(copyFromId)
   const { data: objects } = useObjects({ is_archived: 'false' })
   const createIssue = useCreateIssue()
   const updateIssue = useUpdateIssue()
@@ -28,7 +31,15 @@ export function IssueFormPage() {
   const [raisedByAlias, setRaisedByAlias] = useState('')
   const [blockedByObjectId, setBlockedByObjectId] = useState('')
   const [blockedByNote, setBlockedByNote] = useState('')
+  const [nextAction, setNextAction] = useState<NextAction | ''>('')
+  const [linkedObjectIds, setLinkedObjectIds] = useState<string[]>([])
   const [error, setError] = useState('')
+
+  const toggleLinkedObject = (oid: string) => {
+    setLinkedObjectIds(prev =>
+      prev.includes(oid) ? prev.filter(x => x !== oid) : [...prev, oid]
+    )
+  }
 
   useEffect(() => {
     if (existing) {
@@ -42,8 +53,28 @@ export function IssueFormPage() {
       setRaisedByAlias(existing.raised_by_alias || '')
       setBlockedByObjectId(existing.blocked_by_object_id || '')
       setBlockedByNote(existing.blocked_by_note || '')
+      setNextAction(existing.next_action || '')
+      setLinkedObjectIds(existing.linked_object_ids || [])
     }
   }, [existing])
+
+  // Pre-fill from source issue when duplicating
+  useEffect(() => {
+    if (copySource && !isEdit) {
+      setTitle(`Copy of ${copySource.title}`)
+      setDescription(copySource.description || '')
+      setObjectId(copySource.object_id)
+      setLifecycleStage(copySource.lifecycle_stage)
+      setIssueType(copySource.issue_type)
+      setStatus('open')
+      setOwnerAlias(copySource.owner_alias || '')
+      setRaisedByAlias(copySource.raised_by_alias || '')
+      setBlockedByObjectId(copySource.blocked_by_object_id || '')
+      setBlockedByNote(copySource.blocked_by_note || '')
+      setNextAction(copySource.next_action || '')
+      setLinkedObjectIds(copySource.linked_object_ids || [])
+    }
+  }, [copySource, isEdit])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -60,6 +91,8 @@ export function IssueFormPage() {
       raised_by_alias: raisedByAlias || null,
       blocked_by_object_id: blockedByObjectId || null,
       blocked_by_note: blockedByNote || null,
+      next_action: (nextAction as NextAction) || null,
+      linked_object_ids: linkedObjectIds,
       decision: null,
       resolved_at: null,
     }
@@ -87,7 +120,7 @@ export function IssueFormPage() {
         &larr; Back
       </button>
 
-      <h1 className="text-lg font-bold mb-6">{isEdit ? 'Edit Issue' : 'Log Issue'}</h1>
+      <h1 className="text-lg font-bold mb-6">{isEdit ? 'Edit Issue' : copyFromId ? 'Duplicate Issue' : 'Log Issue'}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Title *">
@@ -114,18 +147,13 @@ export function IssueFormPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Object *">
-            <select
+            <SearchableSelect
+              options={(objects || []).map(o => ({ value: o.id, label: o.name }))}
               value={objectId}
-              onChange={e => setObjectId(e.target.value)}
+              onChange={setObjectId}
+              placeholder="Select object..."
               required
-              className="w-full h-10 px-3 rounded-lg text-sm border outline-none cursor-pointer"
-              style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-            >
-              <option value="">Select object...</option>
-              {objects?.map(obj => (
-                <option key={obj.id} value={obj.id}>{obj.name}</option>
-              ))}
-            </select>
+            />
           </Field>
 
           <Field label="Lifecycle Stage *">
@@ -141,6 +169,31 @@ export function IssueFormPage() {
             </select>
           </Field>
         </div>
+
+        <Field label="Also Linked To (optional)">
+          <div className="flex flex-wrap gap-1.5">
+            {(objects || [])
+              .filter(o => o.id !== objectId)
+              .map(obj => (
+                <button
+                  key={obj.id}
+                  type="button"
+                  onClick={() => toggleLinkedObject(obj.id)}
+                  className="h-7 px-2.5 rounded-full text-[11px] cursor-pointer border transition-colors"
+                  style={{
+                    borderColor: linkedObjectIds.includes(obj.id) ? 'var(--color-accent)' : 'var(--color-border)',
+                    backgroundColor: linkedObjectIds.includes(obj.id) ? 'color-mix(in srgb, var(--color-accent) 15%, transparent)' : 'transparent',
+                    color: linkedObjectIds.includes(obj.id) ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  {obj.name}
+                </button>
+              ))}
+            {(objects || []).filter(o => o.id !== objectId).length === 0 && (
+              <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>No other objects available</span>
+            )}
+          </div>
+        </Field>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Issue Type *">
@@ -170,6 +223,20 @@ export function IssueFormPage() {
           </Field>
         </div>
 
+        <Field label="Next Action">
+          <select
+            value={nextAction}
+            onChange={e => setNextAction(e.target.value as NextAction | '')}
+            className="w-full h-10 px-3 rounded-lg text-sm border outline-none cursor-pointer"
+            style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+          >
+            <option value="">None</option>
+            {Object.entries(NEXT_ACTION_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+        </Field>
+
         <div className="grid grid-cols-2 gap-4">
           <Field label="Owner">
             <input
@@ -194,17 +261,13 @@ export function IssueFormPage() {
         </div>
 
         <Field label="Blocked By Object">
-          <select
+          <SearchableSelect
+            options={(objects || []).filter(o => o.id !== objectId).map(o => ({ value: o.id, label: o.name }))}
             value={blockedByObjectId}
-            onChange={e => setBlockedByObjectId(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg text-sm border outline-none cursor-pointer"
-            style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-          >
-            <option value="">None</option>
-            {objects?.filter(o => o.id !== objectId).map(obj => (
-              <option key={obj.id} value={obj.id}>{obj.name}</option>
-            ))}
-          </select>
+            onChange={setBlockedByObjectId}
+            placeholder="Select blocking object..."
+            emptyLabel="None"
+          />
         </Field>
 
         <Field label="Blocked By Note">

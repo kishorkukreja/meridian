@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { SearchableSelect } from '@/components/SearchableSelect'
 import { useObjects, useCreateObject, useObjectNames } from '@/hooks/useObjects'
 import { useCreateIssue } from '@/hooks/useIssues'
 import { useUpdateMeeting } from '@/hooks/useMeetings'
@@ -135,6 +136,8 @@ export function ConvertToIssueDialog({ nextSteps, meetingId, existingLinkedIssue
           raised_by_alias: null,
           blocked_by_object_id: null,
           blocked_by_note: null,
+          next_action: null,
+          linked_object_ids: [],
           decision: null,
           resolved_at: null,
         })
@@ -183,17 +186,13 @@ export function ConvertToIssueDialog({ nextSteps, meetingId, existingLinkedIssue
                   <label className="block text-xs mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
                     Assign to Object
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={(objects || []).map(o => ({ value: o.id, label: o.name }))}
                     value={selectedObjectId}
-                    onChange={e => handleObjectSelect(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg text-sm border outline-none cursor-pointer"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                  >
-                    <option value="">Select an object...</option>
-                    {objects?.map(obj => (
-                      <option key={obj.id} value={obj.id}>{obj.name}</option>
-                    ))}
-                  </select>
+                    onChange={handleObjectSelect}
+                    placeholder="Select an object..."
+                    required
+                  />
                 </div>
               )}
 

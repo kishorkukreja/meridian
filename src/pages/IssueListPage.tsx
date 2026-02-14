@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useIssues, useUpdateIssue, useBulkUpdateIssues } from '@/hooks/useIssues'
 import { useObjects } from '@/hooks/useObjects'
 import { useFilters } from '@/hooks/useFilters'
+import type { IssueWithObject } from '@/types/database'
 import { AgingBadge } from '@/components/AgingBadge'
 import { FilterBar } from '@/components/FilterBar'
 import { SummaryBar } from '@/components/SummaryBar'
@@ -15,18 +16,64 @@ import { BulkActionBar } from '@/components/BulkActionBar'
 import type { BulkAction } from '@/components/BulkActionBar'
 import { ISSUE_VIEWS } from '@/lib/savedViews'
 import { exportIssuesToExcel, exportFullWorkbook } from '@/lib/exportExcel'
-import { ISSUE_TYPE_LABELS } from '@/lib/constants'
+import { ISSUE_TYPE_LABELS, NEXT_ACTION_LABELS, NEXT_ACTION_COLORS } from '@/lib/constants'
 import { STAGE_LABELS } from '@/types/database'
 import type { IssueStatus } from '@/types/database'
 
 export function IssueListPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { filters, setFilter, clearFilters, activeFilterCount } = useFilters()
   const { data: issues, isLoading, error } = useIssues(filters)
   const { data: allIssues } = useIssues()
   const { data: allObjects } = useObjects()
   const updateIssue = useUpdateIssue()
   const bulkUpdate = useBulkUpdateIssues()
+
+  // View mode: list or by_object
+  const viewMode = (searchParams.get('view') as 'list' | 'by_object') || 'list'
+  const setViewMode = (mode: 'list' | 'by_object') => {
+    const next = new URLSearchParams(searchParams)
+    if (mode === 'list') next.delete('view')
+    else next.set('view', mode)
+    setSearchParams(next, { replace: true })
+  }
+
+  // Collapsed state for by_object view
+  const [collapsedObjects, setCollapsedObjects] = useState<Set<string>>(new Set())
+
+  const toggleCollapse = (objectName: string) => {
+    setCollapsedObjects(prev => {
+      const next = new Set(prev)
+      if (next.has(objectName)) next.delete(objectName)
+      else next.add(objectName)
+      return next
+    })
+  }
+
+  // Group issues by object_name (primary + linked objects)
+  const groupedIssues = useMemo(() => {
+    if (!issues || viewMode !== 'by_object') return null
+    const groups = new Map<string, IssueWithObject[]>()
+    const addToGroup = (name: string, issue: IssueWithObject) => {
+      if (!groups.has(name)) groups.set(name, [])
+      // Avoid duplicates if issue already in group
+      if (!groups.get(name)!.some(i => i.id === issue.id)) {
+        groups.get(name)!.push(issue)
+      }
+    }
+    for (const issue of issues) {
+      addToGroup(issue.object_name || 'Unknown', issue)
+      // Also group under linked objects
+      if (issue.linked_object_ids?.length && allObjects) {
+        for (const oid of issue.linked_object_ids) {
+          const obj = allObjects.find(o => o.id === oid)
+          if (obj) addToGroup(obj.name, issue)
+        }
+      }
+    }
+    return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)))
+  }, [issues, viewMode, allObjects])
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -120,7 +167,24 @@ export function IssueListPage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Issues</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-bold">Issues</h1>
+          <div className="flex rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+            {(['list', 'by_object'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className="h-7 px-3 text-[11px] font-medium cursor-pointer border-none"
+                style={{
+                  backgroundColor: viewMode === mode ? 'var(--color-accent)' : 'transparent',
+                  color: viewMode === mode ? '#fff' : 'var(--color-text-secondary)',
+                }}
+              >
+                {mode === 'list' ? 'List' : 'By Object'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-2">
           <ExportDropdown
             onExportFiltered={() => issues && exportIssuesToExcel(issues)}
@@ -160,7 +224,7 @@ export function IssueListPage() {
         />
       )}
 
-      {issues && issues.length > 0 && (
+      {issues && issues.length > 0 && viewMode === 'list' && (
         <>
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
@@ -176,7 +240,7 @@ export function IssueListPage() {
                       onClick={e => e.stopPropagation()}
                     />
                   </th>
-                  {['Title', 'Object', 'Type', 'Stage', 'Status', 'Owner', 'Age'].map(col => (
+                  {['Title', 'Object', 'Type', 'Stage', 'Status', 'Next Action', 'Owner', 'Age'].map(col => (
                     <th key={col} className="text-left px-3 py-2.5 text-xs font-medium whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {col}
                     </th>
@@ -227,6 +291,18 @@ export function IssueListPage() {
                         onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
                       />
                     </td>
+                    <td className="px-3 py-2.5">
+                      {issue.next_action ? (
+                        <span
+                          className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                        >
+                          {NEXT_ACTION_LABELS[issue.next_action]}
+                        </span>
+                      ) : (
+                        <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
                       {issue.owner_alias || '-'}
                     </td>
@@ -263,6 +339,17 @@ export function IssueListPage() {
                   <span className="font-[family-name:var(--font-data)]">{issue.object_name}</span>
                   <span>&middot;</span>
                   <span>{ISSUE_TYPE_LABELS[issue.issue_type]}</span>
+                  {issue.next_action && (
+                    <>
+                      <span>&middot;</span>
+                      <span
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                      >
+                        {NEXT_ACTION_LABELS[issue.next_action]}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <AgingBadge days={issue.age_days} type="issue" />
@@ -276,6 +363,167 @@ export function IssueListPage() {
             ))}
           </div>
         </>
+      )}
+
+      {/* By Object grouped view */}
+      {issues && issues.length > 0 && viewMode === 'by_object' && groupedIssues && (
+        <div className="space-y-3">
+          {[...groupedIssues.entries()].map(([objectName, groupIssues]) => {
+            const isCollapsed = collapsedObjects.has(objectName)
+            return (
+              <div key={objectName} className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+                {/* Group header */}
+                <button
+                  onClick={() => toggleCollapse(objectName)}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-left cursor-pointer border-none"
+                  style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}
+                >
+                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    {isCollapsed ? '\u25B6' : '\u25BC'}
+                  </span>
+                  <span className="text-sm font-semibold font-[family-name:var(--font-data)]">{objectName}</span>
+                  <span
+                    className="ml-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-secondary)' }}
+                  >
+                    {groupIssues.length}
+                  </span>
+                </button>
+
+                {/* Group content */}
+                {!isCollapsed && (
+                  <>
+                    {/* Desktop table rows */}
+                    <div className="hidden md:block">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                            <th className="w-8 px-2 py-2" />
+                            {['Title', 'Type', 'Stage', 'Status', 'Next Action', 'Owner', 'Age'].map(col => (
+                              <th key={col} className="text-left px-3 py-2 text-[11px] font-medium whitespace-nowrap" style={{ color: 'var(--color-text-tertiary)' }}>
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupIssues.map((issue, i) => (
+                            <tr
+                              key={issue.id}
+                              onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
+                              className="cursor-pointer transition-colors duration-150"
+                              style={{
+                                backgroundColor: selectedIds.has(issue.id)
+                                  ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                                  : i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)',
+                              }}
+                              onMouseEnter={e => {
+                                if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
+                              }}
+                              onMouseLeave={e => {
+                                if (!selectedIds.has(issue.id)) e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)'
+                              }}
+                            >
+                              <td className="w-8 px-2 py-2.5">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(issue.id)}
+                                  onChange={() => toggleSelect(issue.id)}
+                                  onClick={e => e.stopPropagation()}
+                                  className="cursor-pointer accent-[var(--color-accent)]"
+                                />
+                              </td>
+                              <td className="px-3 py-2.5 text-xs font-medium max-w-[200px] truncate">{issue.title}</td>
+                              <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {ISSUE_TYPE_LABELS[issue.issue_type]}
+                              </td>
+                              <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {STAGE_LABELS[issue.lifecycle_stage]}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <InlineStatusSelect
+                                  status={issue.status}
+                                  type="issue"
+                                  onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                                />
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {issue.next_action ? (
+                                  <span
+                                    className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                                  >
+                                    {NEXT_ACTION_LABELS[issue.next_action]}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 text-xs font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-secondary)' }}>
+                                {issue.owner_alias || '-'}
+                              </td>
+                              <td className="px-3 py-2.5"><AgingBadge days={issue.age_days} type="issue" /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile cards */}
+                    <div className="md:hidden space-y-0">
+                      {groupIssues.map(issue => (
+                        <div
+                          key={issue.id}
+                          onClick={() => selectedIds.size > 0 ? toggleSelect(issue.id) : navigate(`/issues/${issue.id}`)}
+                          className="p-4 border-t cursor-pointer"
+                          style={{
+                            backgroundColor: selectedIds.has(issue.id)
+                              ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)'
+                              : 'var(--color-bg-primary)',
+                            borderColor: 'var(--color-border)',
+                          }}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="font-medium text-sm truncate flex-1">{issue.title}</span>
+                            <InlineStatusSelect
+                              status={issue.status}
+                              type="issue"
+                              onChange={(s) => handleStatusChange(issue.id, s, issue.decision)}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            <span>{ISSUE_TYPE_LABELS[issue.issue_type]}</span>
+                            <span>&middot;</span>
+                            <span>{STAGE_LABELS[issue.lifecycle_stage]}</span>
+                            {issue.next_action && (
+                              <>
+                                <span>&middot;</span>
+                                <span
+                                  className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                                  style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+                                >
+                                  {NEXT_ACTION_LABELS[issue.next_action]}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <AgingBadge days={issue.age_days} type="issue" />
+                            {issue.owner_alias && (
+                              <span className="text-[10px] font-[family-name:var(--font-data)]" style={{ color: 'var(--color-text-tertiary)' }}>
+                                {issue.owner_alias}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* Bulk Action Bar */}

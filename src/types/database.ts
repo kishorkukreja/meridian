@@ -51,6 +51,11 @@ export type IssueStatus =
   | 'resolved'
   | 'closed';
 
+export type NextAction =
+  | 'observe'
+  | 'follow_up'
+  | 'set_meeting';
+
 export type ObjectStatus =
   | 'on_track'
   | 'at_risk'
@@ -149,6 +154,8 @@ export type IssueRow = {
   raised_by_alias: string | null;
   blocked_by_object_id: string | null;
   blocked_by_note: string | null;
+  next_action: NextAction | null;
+  linked_object_ids: string[];
   decision: string | null;
   resolved_at: string | null;
   is_archived: boolean;

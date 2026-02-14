@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useScheduleOccurrences } from '@/hooks/useSchedule'
-import { getWeekRange, getTodayStr, addDays, parseDate, formatDate } from '@/lib/recurrence'
+import { getWeekRange, getTodayStr, addDays, parseDate } from '@/lib/recurrence'
 import { ActionNeededPanel } from '@/components/ActionNeededPanel'
 import { ScheduleDayView } from '@/components/ScheduleDayView'
 import { ScheduleWeekView } from '@/components/ScheduleWeekView'

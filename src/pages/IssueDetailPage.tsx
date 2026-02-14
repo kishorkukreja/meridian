@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useIssue, useUpdateIssue } from '@/hooks/useIssues'
+import { useObjects } from '@/hooks/useObjects'
 import { StatusBadge } from '@/components/StatusBadge'
 import { AgingBadge } from '@/components/AgingBadge'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { CommentSection } from '@/components/CommentSection'
-import { ISSUE_TYPE_LABELS, ISSUE_STATUS_LABELS } from '@/lib/constants'
+import { ISSUE_TYPE_LABELS, ISSUE_STATUS_LABELS, NEXT_ACTION_LABELS, NEXT_ACTION_COLORS } from '@/lib/constants'
 import { STAGE_LABELS } from '@/types/database'
 import type { IssueStatus } from '@/types/database'
 
@@ -14,6 +15,7 @@ export function IssueDetailPage() {
   const navigate = useNavigate()
   const { data: issue, isLoading } = useIssue(id)
   const updateIssue = useUpdateIssue()
+  const { data: allObjects } = useObjects()
   const [showDecisionModal, setShowDecisionModal] = useState(false)
   const [decisionText, setDecisionText] = useState('')
   const [pendingStatus, setPendingStatus] = useState<IssueStatus | null>(null)
@@ -70,6 +72,14 @@ export function IssueDetailPage() {
           {issue.owner_alias && <span>Owner: <span className="font-[family-name:var(--font-data)]">{issue.owner_alias}</span></span>}
           {issue.raised_by_alias && <span>Raised by: <span className="font-[family-name:var(--font-data)]">{issue.raised_by_alias}</span></span>}
           <span>Created: {new Date(issue.created_at).toLocaleDateString()}</span>
+          {issue.next_action && (
+            <span
+              className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `color-mix(in srgb, ${NEXT_ACTION_COLORS[issue.next_action]} 15%, transparent)`, color: NEXT_ACTION_COLORS[issue.next_action] }}
+            >
+              {NEXT_ACTION_LABELS[issue.next_action]}
+            </span>
+          )}
         </div>
       </div>
 
@@ -84,6 +94,28 @@ export function IssueDetailPage() {
           {issue.object_name}
         </button>
       </div>
+
+      {/* Linked Objects */}
+      {issue.linked_object_ids && issue.linked_object_ids.length > 0 && (
+        <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <h2 className="text-sm font-semibold mb-2">Also Linked To</h2>
+          <div className="flex flex-wrap gap-2">
+            {issue.linked_object_ids.map(oid => {
+              const obj = allObjects?.find(o => o.id === oid)
+              return (
+                <button
+                  key={oid}
+                  onClick={() => navigate(`/objects/${oid}`)}
+                  className="h-7 px-2.5 rounded-full text-[11px] cursor-pointer border font-[family-name:var(--font-data)]"
+                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-accent)' }}
+                >
+                  {obj?.name || oid}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Dependencies */}
       {(issue.blocked_by_object_id || issue.blocked_by_note) && (
@@ -142,14 +174,23 @@ export function IssueDetailPage() {
       {/* Comments */}
       <CommentSection entityType="issue" entityId={issue.id} />
 
-      {/* Edit button */}
-      <button
-        onClick={() => navigate(`/issues/${id}/edit`)}
-        className="h-8 px-4 rounded text-xs cursor-pointer border"
-        style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
-      >
-        Edit Issue
-      </button>
+      {/* Action buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => navigate(`/issues/${id}/edit`)}
+          className="h-8 px-4 rounded text-xs cursor-pointer border"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+        >
+          Edit Issue
+        </button>
+        <button
+          onClick={() => navigate(`/issues/new?copy_from=${issue.id}`)}
+          className="h-8 px-4 rounded text-xs cursor-pointer border"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
+        >
+          Duplicate
+        </button>
+      </div>
 
       {/* Decision Modal */}
       {showDecisionModal && (
