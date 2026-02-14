@@ -21,7 +21,11 @@ Before building any feature, read the relevant context file:
 | Reports page | `docs/features/07-reports.md` |
 | Dashboard / analytics | `docs/features/08-dashboard.md` |
 | Bulk actions | `docs/features/09-bulk-actions.md` |
+| Meetings & AI summarization | `docs/features/09-meetings.md` |
 | Comments thread | `docs/features/10-comments.md` |
+| Recurring schedule | `docs/features/10-schedule.md` |
+| External API (Issues) | `docs/features/11-api.md` |
+| Theme, pins, CSV import, search | `docs/features/12-extras.md` |
 | UI/UX, colors, typography, components | `docs/design/CONTEXT.md` |
 | Deployment (Vercel + Supabase) | `docs/deployment/CONTEXT.md` |
 | Data masking rules | `docs/masking/CONTEXT.md` |
@@ -35,30 +39,22 @@ Before building any feature, read the relevant context file:
 - **React Router** for navigation
 - **Vercel** for hosting
 
-## Build Sequence
-
-Follow this order strictly:
-
-1. `npm create vite@latest . -- --template react-ts` + install dependencies
-2. Set up Supabase client (`src/lib/supabase.ts`)
-3. Set up auth (login page, auth context, route guards)
-4. Build Object List page with filters
-5. Build Object Detail page with lifecycle stepper
-6. Build Issue List page with filters
-7. Build Issue Detail page with decision capture
-8. Build Create/Edit forms for objects and issues
-9. Add aging computation and display
-10. Add archive page and archive actions
-11. Add summary bar / counts to list pages
-12. Responsive design pass (mobile card layouts, bottom nav)
-13. Final polish: empty states, loading skeletons, error handling
-
-## Dependencies to Install
+## Running the App
 
 ```bash
-npm install @supabase/supabase-js @tanstack/react-query react-router-dom
-npm install -D tailwindcss @tailwindcss/vite
+npm install
+npm run dev        # Development server at localhost:5173
+npm run build      # Production build
+npx supabase db push  # Push pending migrations to Supabase
 ```
+
+## Key Dependencies
+
+- `@supabase/supabase-js` — Database client + auth
+- `@tanstack/react-query` — Server state & caching
+- `react-router-dom` — Client-side routing
+- `tailwindcss` + `@tailwindcss/vite` — Styling
+- `xlsx` — Excel export
 
 ## Code Principles
 
@@ -83,8 +79,10 @@ No test framework in v1. Manual testing against Supabase with seed data is suffi
 
 ## Important Notes
 
-- The database migration is ready at `supabase/migrations/001_initial_schema.sql`. Run it in Supabase SQL Editor.
-- Seed data is at `supabase/seed/seed.sql`. Replace `USER_ID_HERE` with your actual Supabase auth user UUID.
-- The TypeScript types at `src/types/database.ts` match the schema exactly. Use them everywhere.
-- Design tokens (colors, fonts) are defined in `docs/design/CONTEXT.md`. Implement them as Tailwind config extensions.
-- RLS is already configured in the migration. The Supabase anon key is safe in client-side code.
+- **Migrations**: 11 migration files in `supabase/migrations/`. Push with `npx supabase db push`.
+- **Seed data**: `supabase/seed/seed.sql` — replace `USER_ID_HERE` with your Supabase auth user UUID.
+- **Types**: `src/types/database.ts` matches the schema exactly. Use these types everywhere.
+- **Theming**: CSS custom properties in `src/index.css`. Dark mode by default, light mode via `html.light` class. Theme state managed by `src/lib/ThemeContext.tsx`.
+- **Edge Functions**: 3 Deno functions in `supabase/functions/` — `issues-api`, `generate-mom`, `polish-email`.
+- **RLS**: All tables have row-level security. The Supabase anon key is safe in client-side code.
+- **Environment**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`.

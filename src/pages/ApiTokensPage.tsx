@@ -260,7 +260,7 @@ export function ApiTokensPage() {
           style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-secondary)' }}
         >
 {`curl -H "Authorization: Bearer mrd_your_token_here" \\
-  YOUR_SUPABASE_URL/functions/v1/issues-api/issues`}
+  ${import.meta.env.VITE_SUPABASE_URL}/functions/v1/issues-api/issues`}
         </code>
       </div>
     </div>
